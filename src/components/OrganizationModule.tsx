@@ -66,7 +66,8 @@ export const OrganizationModule: React.FC = () => {
     citizens,
     updateCitizen,
     requests,
-    setSelectedCitizenForHistory
+    setSelectedCitizenForHistory,
+    setActiveSection
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'records' | 'reports' | 'team_members' | 'referred_citizens'>('records');
@@ -397,6 +398,15 @@ export const OrganizationModule: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto justify-end">
+          <button
+            onClick={() => setActiveSection('dashboard')}
+            className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="الانتقال إلى لوحة تحكم وإحصائيات قسم التنظيم والجماهير"
+          >
+            <BarChart3 className="w-4 h-4 text-purple-600" />
+            <span>لوحة إحصائيات التنظيم</span>
+          </button>
+
           {/* Main Action: New Request Outcome Evaluation */}
           <button
             onClick={handleOpenNewEvaluation}

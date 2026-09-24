@@ -35,6 +35,10 @@ import {
 import { findBestArabicMatch } from '../utils/arabicNameMatcher';
 import { clearAllImagesFromDB } from '../utils/imageDb';
 import { pushToGoogleSheetsRealtime } from '../services/realtimeGoogleSync';
+import { safeLocalStorageSet, sanitizeRequestsForStorage, cleanBloatedLocalStorage } from '../utils/safeStorage';
+
+// Run storage cleanup immediately on module evaluation to fix any existing quota issue
+cleanBloatedLocalStorage();
 
 export interface UrgentNotification {
   id: string;
@@ -361,9 +365,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           }
 
-          // Save sanitized list back to localStorage to permanently clean corrupted duplicate keys
+          // Save sanitized list back to localStorage to permanently clean corrupted duplicate keys and bloated images
           try {
-            localStorage.setItem(STORAGE_KEY_PREFIX + 'requests', JSON.stringify(uniqueParsed));
+            const sanitized = sanitizeRequestsForStorage(uniqueParsed);
+            safeLocalStorageSet(STORAGE_KEY_PREFIX + 'requests', JSON.stringify(sanitized));
           } catch {
             // Ignore quota issues
           }
@@ -564,53 +569,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDesktopInstallModalOpen, setIsDesktopInstallModalOpen] = useState<boolean>(false);
   const [isSystemWipeModalOpen, setIsSystemWipeModalOpen] = useState<boolean>(false);
 
-  // Sync state changes to localStorage
+  // Sync state changes safely to localStorage without crashing or quota errors
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'settings', JSON.stringify(systemSettings));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'settings', JSON.stringify(systemSettings));
   }, [systemSettings]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'users', JSON.stringify(users));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'users', JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'citizens', JSON.stringify(citizens));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'citizens', JSON.stringify(citizens));
   }, [citizens]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'requests', JSON.stringify(requests));
+    const sanitized = sanitizeRequestsForStorage(requests);
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'requests', JSON.stringify(sanitized));
   }, [requests]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'cheques', JSON.stringify(cheques));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'cheques', JSON.stringify(cheques));
   }, [cheques]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'interviews', JSON.stringify(interviews));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'interviews', JSON.stringify(interviews));
   }, [interviews]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'org', JSON.stringify(organizationRecords));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'org', JSON.stringify(organizationRecords));
   }, [organizationRecords]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'dropdowns', JSON.stringify(dropdowns));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'dropdowns', JSON.stringify(dropdowns));
   }, [dropdowns]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'audit', JSON.stringify(auditLogs));
+    // Keep max 100 recent audit logs in storage to avoid unbounded memory accumulation
+    const trimmedLogs = auditLogs.slice(0, 100);
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'audit', JSON.stringify(trimmedLogs));
   }, [auditLogs]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'dynamic_fields', JSON.stringify(dynamicFields));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'dynamic_fields', JSON.stringify(dynamicFields));
   }, [dynamicFields]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'documents', JSON.stringify(documents));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'documents', JSON.stringify(documents));
   }, [documents]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PREFIX + 'letters', JSON.stringify(officialLetters));
+    safeLocalStorageSet(STORAGE_KEY_PREFIX + 'letters', JSON.stringify(officialLetters));
   }, [officialLetters]);
 
   const addAuditLog = (action: string, section: string, details: string) => {

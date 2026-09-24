@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import { 
   ShieldCheck, 
   Search, 
-  Plus
+  Plus,
+  BarChart2
 } from 'lucide-react';
 
 interface ParliamentaryInquiry {
@@ -17,7 +18,7 @@ interface ParliamentaryInquiry {
 }
 
 export const AuditModule: React.FC = () => {
-  const { auditLogs } = useApp();
+  const { auditLogs, setActiveSection } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'audit_trail' | 'inquiries'>('audit_trail');
@@ -97,7 +98,16 @@ export const AuditModule: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setActiveSection('dashboard')}
+            className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="الانتقال إلى لوحة تحكم وإحصائيات الرقابة والتشريع"
+          >
+            <BarChart2 className="w-4 h-4 text-rose-600" />
+            <span>لوحة إحصائيات الرقابة</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('audit_trail')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${

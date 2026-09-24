@@ -1,5 +1,6 @@
 import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
+import { cleanBloatedLocalStorage } from '../utils/safeStorage';
 
 interface Props {
   children: ReactNode;
@@ -24,6 +25,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error caught by ErrorBoundary:', error, errorInfo);
+    // If the error was caused by storage quota exceeded, immediately clean bloated items
+    if (error && (error.message?.includes('quota') || error.name === 'QuotaExceededError')) {
+      try {
+        cleanBloatedLocalStorage();
+      } catch {}
+    }
     this.setState({ errorInfo });
   }
 

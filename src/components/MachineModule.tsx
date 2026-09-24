@@ -9,7 +9,8 @@ import {
   User,
   Clock,
   Sparkles,
-  Download
+  Download,
+  BarChart2
 } from 'lucide-react';
 import { OfficeRequest } from '../types';
 
@@ -27,7 +28,7 @@ interface OfficialLetter {
 }
 
 export const MachineModule: React.FC = () => {
-  const { systemSettings, citizens, requests, updateRequest, addAuditLog, currentUser } = useApp();
+  const { systemSettings, citizens, requests, updateRequest, addAuditLog, currentUser, setActiveSection } = useApp();
 
   const [activeTab, setActiveTab] = useState<'letters' | 'requests_print'>('requests_print');
   const [requestSearchQuery, setRequestSearchQuery] = useState('حسن طالب');
@@ -194,28 +195,39 @@ export const MachineModule: React.FC = () => {
           </p>
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setActiveTab('requests_print')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'requests_print'
-                ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
+            onClick={() => setActiveSection('dashboard')}
+            className="px-3.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="الانتقال إلى لوحة تحكم وإحصائيات المكنة والطباعة"
           >
-            طباعة طلبات المراجعين (تحديث مستلم)
+            <BarChart2 className="w-4 h-4 text-teal-600" />
+            <span>لوحة إحصائيات المكنة</span>
           </button>
-          <button
-            onClick={() => setActiveTab('letters')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'letters'
-                ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            الكتب الرسمية البرلمانية
-          </button>
+
+          {/* Tab switcher */}
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button
+              onClick={() => setActiveTab('requests_print')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'requests_print'
+                  ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              طباعة طلبات المراجعين (تحديث مستلم)
+            </button>
+            <button
+              onClick={() => setActiveTab('letters')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'letters'
+                  ? 'bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              الكتب الرسمية البرلمانية
+            </button>
+          </div>
         </div>
       </div>
 

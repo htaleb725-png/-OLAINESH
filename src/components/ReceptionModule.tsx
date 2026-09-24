@@ -16,7 +16,8 @@ import {
   X,
   Users,
   LogIn,
-  ShieldCheck
+  ShieldCheck,
+  BarChart2
 } from 'lucide-react';
 import { AiRequestDrafterModal } from './AiRequestDrafterModal';
 import { DepartmentWorkReportsModal } from './DepartmentWorkReportsModal';
@@ -289,6 +290,15 @@ export const ReceptionModule: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setActiveSection('dashboard')}
+            className="px-3.5 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="الانتقال إلى لوحة تحكم وإحصائيات الاستعلامات والمراجعين"
+          >
+            <BarChart2 className="w-4 h-4 text-blue-600" />
+            <span>لوحة إحصائيات الاستعلامات</span>
+          </button>
+
           <button
             onClick={() => setShowWorkReportsModal(true)}
             className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"

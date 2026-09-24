@@ -76,16 +76,6 @@ const MainAppLayout: React.FC = () => {
     }
   };
 
-  // If a department staff member lands on the executive dashboard, automatically redirect them to their department
-  React.useEffect(() => {
-    if (currentUser) {
-      const isSuper = ['developer', 'director', 'deputy'].includes(currentUser.Role);
-      if (!isSuper && activeSection === 'dashboard') {
-        setActiveSection(getHomeSectionForRole(currentUser.Role));
-      }
-    }
-  }, [currentUser, activeSection, setActiveSection]);
-
   if (!isAuthenticated) {
     return <SplashLanding />;
   }
@@ -96,30 +86,30 @@ const MainAppLayout: React.FC = () => {
     const role = currentUser.Role;
     if (role === 'developer' || role === 'director' || role === 'deputy') return true;
 
-    // The central dashboard ('dashboard') is strictly for Developer and Director
-    if (section === 'dashboard') return false;
+    // Every department has access to its statistics dashboard
+    if (section === 'dashboard') return true;
 
     switch (role) {
       case 'reception':
       case 'reception_officer':
-        return ['reception', 'search_archive', 'reports', 'whatsapp'].includes(section);
+        return ['dashboard', 'reception', 'search_archive', 'reports', 'whatsapp'].includes(section);
       case 'admin':
       case 'admin_officer':
-        return ['admin', 'drive_requests', 'search_archive', 'reports', 'whatsapp'].includes(section);
+        return ['dashboard', 'admin', 'drive_requests', 'search_archive', 'reports', 'whatsapp'].includes(section);
       case 'interviews_officer':
-        return ['interviews', 'search_archive', 'reports', 'whatsapp'].includes(section);
+        return ['dashboard', 'interviews', 'search_archive', 'reports', 'whatsapp'].includes(section);
       case 'organization':
       case 'organization_officer':
-        return ['organization', 'search_archive', 'reports', 'whatsapp'].includes(section);
+        return ['dashboard', 'organization', 'search_archive', 'reports', 'whatsapp'].includes(section);
       case 'machine':
       case 'machine_officer':
-        return ['machine', 'search_archive', 'reports'].includes(section);
+        return ['dashboard', 'machine', 'search_archive', 'reports'].includes(section);
       case 'audit':
-        return ['audit', 'search_archive', 'reports'].includes(section);
+        return ['dashboard', 'audit', 'search_archive', 'reports'].includes(section);
       case 'archive':
-        return ['search_archive', 'reports'].includes(section);
+        return ['dashboard', 'search_archive', 'reports'].includes(section);
       default:
-        return ['search_archive', 'reports'].includes(section);
+        return ['dashboard', 'search_archive', 'reports'].includes(section);
     }
   };
 

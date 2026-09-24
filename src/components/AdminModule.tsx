@@ -29,7 +29,8 @@ import {
   LogIn,
   ShieldCheck,
   Maximize2,
-  Download
+  Download,
+  BarChart2
 } from 'lucide-react';
 import { DirectScannerPrinter } from './DirectScannerPrinter';
 import { AiRequestDrafterModal } from './AiRequestDrafterModal';
@@ -425,6 +426,15 @@ export const AdminModule: React.FC = () => {
           >
             <FileImage className="w-4 h-4 text-emerald-200" />
             <span>إرفاق صور المعاملات (1000 - 2000 صورة)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSection('dashboard')}
+            className="px-3.5 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="الانتقال إلى لوحة تحكم وإحصائيات قسم الإدارة والمعاملات"
+          >
+            <BarChart2 className="w-4 h-4 text-amber-600" />
+            <span>لوحة إحصائيات الإدارة</span>
           </button>
 
           <button

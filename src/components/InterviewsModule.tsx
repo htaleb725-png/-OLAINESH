@@ -7,7 +7,8 @@ import {
   Search, 
   CheckCircle, 
   Send, 
-  Edit
+  Edit,
+  BarChart2
 } from 'lucide-react';
 
 export const InterviewsModule: React.FC = () => {
@@ -17,7 +18,8 @@ export const InterviewsModule: React.FC = () => {
     updateInterview, 
     convertInterviewToRequest, 
     citizens,
-    updateCitizen
+    updateCitizen,
+    setActiveSection
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -187,16 +189,27 @@ export const InterviewsModule: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setEditingInterview(null);
-            setShowAddModal(true);
-          }}
-          className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ جدولة مقابلة جديدة</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setActiveSection('dashboard')}
+            className="px-3.5 py-2 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="الانتقال إلى لوحة تحكم وإحصائيات مقابلات النائب"
+          >
+            <BarChart2 className="w-4 h-4 text-teal-600" />
+            <span>لوحة إحصائيات المقابلات</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setEditingInterview(null);
+              setShowAddModal(true);
+            }}
+            className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ جدولة مقابلة جديدة</span>
+          </button>
+        </div>
       </div>
 
       {/* Success banner */}

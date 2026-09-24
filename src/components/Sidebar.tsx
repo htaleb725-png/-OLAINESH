@@ -48,12 +48,37 @@ export const Sidebar: React.FC = () => {
   const urgentRequestsCount = requests.filter(r => r.Priority === 'عاجل' || r.Priority === 'خاص جداً').length;
   const pendingInterviewsCount = interviews.filter(i => i.Status === 'مجدولة').length;
 
+  const role = currentUser?.Role;
+  const isSuperUser = role === 'developer' || role === 'director' || role === 'deputy';
+
+  let dashboardLabel = 'لوحة التحكم والمؤشرات المركزية';
+  let dashboardBadge = 'الإدارة العليا';
+  if (role === 'reception' || role === 'reception_officer') {
+    dashboardLabel = 'لوحة إحصائيات الاستعلامات والمراجعين';
+    dashboardBadge = 'إحصائيات';
+  } else if (role === 'admin' || role === 'admin_officer') {
+    dashboardLabel = 'لوحة إحصائيات الإدارة والمعاملات';
+    dashboardBadge = 'إحصائيات';
+  } else if (role === 'interviews_officer') {
+    dashboardLabel = 'لوحة إحصائيات مقابلات النائب';
+    dashboardBadge = 'إحصائيات';
+  } else if (role === 'organization' || role === 'organization_officer') {
+    dashboardLabel = 'لوحة إحصائيات التنظيم والجماهير';
+    dashboardBadge = 'إحصائيات';
+  } else if (role === 'machine' || role === 'machine_officer') {
+    dashboardLabel = 'لوحة إحصائيات المكنة والطباعة';
+    dashboardBadge = 'إحصائيات';
+  } else if (role === 'audit') {
+    dashboardLabel = 'لوحة إحصائيات الرقابة والتدقيق';
+    dashboardBadge = 'إحصائيات';
+  }
+
   const mainNavItems = [
     {
       id: 'dashboard',
-      label: 'الرئيسية (لوحة المطور والمدير الشاملة)',
+      label: dashboardLabel,
       icon: LayoutDashboard,
-      badge: 'الإدارة العليا',
+      badge: dashboardBadge,
       badgeColor: 'bg-blue-500/30 text-blue-200 border-blue-500/40',
       hoverBg: 'hover:bg-blue-950/50 hover:border-blue-500/40 hover:text-blue-100 hover:shadow-lg hover:shadow-blue-950/50',
       hoverIcon: 'group-hover:text-blue-400 group-hover:drop-shadow-[0_0_10px_rgba(96,165,250,0.9)]',
@@ -233,24 +258,24 @@ export const Sidebar: React.FC = () => {
     switch (role) {
       case 'reception':
       case 'reception_officer':
-        return ['reception', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
+        return ['dashboard', 'reception', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
       case 'admin':
       case 'admin_officer':
-        return ['admin', 'drive_requests', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
+        return ['dashboard', 'admin', 'drive_requests', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
       case 'interviews_officer':
-        return ['interviews', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
+        return ['dashboard', 'interviews', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
       case 'organization':
       case 'organization_officer':
-        return ['organization', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
+        return ['dashboard', 'organization', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
       case 'machine':
       case 'machine_officer':
-        return ['machine', 'search_archive', 'reports'].includes(sectionId);
+        return ['dashboard', 'machine', 'search_archive', 'reports'].includes(sectionId);
       case 'audit':
-        return ['audit', 'search_archive', 'reports'].includes(sectionId);
+        return ['dashboard', 'audit', 'search_archive', 'reports'].includes(sectionId);
       case 'archive':
-        return ['search_archive', 'reports'].includes(sectionId);
+        return ['dashboard', 'search_archive', 'reports'].includes(sectionId);
       default:
-        return ['search_archive', 'reports'].includes(sectionId);
+        return ['dashboard', 'search_archive', 'reports'].includes(sectionId);
     }
   };
 
