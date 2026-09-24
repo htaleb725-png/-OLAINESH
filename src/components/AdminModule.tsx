@@ -23,12 +23,19 @@ import {
   Trash2,
   AlertTriangle,
   Sparkles,
-  FileImage
+  FileImage,
+  Users,
+  Upload,
+  LogIn,
+  ShieldCheck,
+  Maximize2,
+  Download
 } from 'lucide-react';
 import { DirectScannerPrinter } from './DirectScannerPrinter';
 import { AiRequestDrafterModal } from './AiRequestDrafterModal';
 import { SmartImageArchiveModule } from './SmartImageArchiveModule';
 import { ReferrersStats } from './ReferrersStats';
+import { SYSTEM_PERMISSIONS } from '../types';
 
 export const AdminModule: React.FC = () => {
   const { 
@@ -41,6 +48,8 @@ export const AdminModule: React.FC = () => {
     getDropdownOptions, 
     addDocument,
     currentUser,
+    users,
+    switchUser,
     setSelectedCitizenForHistory,
     setPrintableBadgeCitizen,
     setActiveSection,
@@ -48,7 +57,7 @@ export const AdminModule: React.FC = () => {
     forwardRequestWorkflow
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'requests_list' | 'reception_citizens' | 'direct_scanner' | 'smart_images' | 'referrers'>('requests_list');
+  const [activeTab, setActiveTab] = useState<'requests_list' | 'reception_citizens' | 'direct_scanner' | 'smart_images' | 'referrers' | 'department_staff'>('requests_list');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [receptionSearch, setReceptionSearch] = useState('');
@@ -62,6 +71,18 @@ export const AdminModule: React.FC = () => {
   const [editingRequest, setEditingRequest] = useState<OfficeRequest | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<OfficeRequest | null>(null);
   const [scannerCitizenId, setScannerCitizenId] = useState<string>('');
+
+  // Scanner image in Request state (حفظ صورة الاسكنر كما هي مع توثيق اسم الموظف والتاريخ)
+  const [attachedScanImage, setAttachedScanImage] = useState<string | null>(null);
+  const [scanUploadedBy, setScanUploadedBy] = useState<string>('');
+  const [scanUploadedAt, setScanUploadedAt] = useState<string>('');
+  const [fullPreviewScan, setFullPreviewScan] = useState<{
+    url: string;
+    uploadedBy: string;
+    uploadedAt: string;
+    requestTitle: string;
+    citizenName: string;
+  } | null>(null);
 
   // Attendance and Dependency form state
   const [attendanceType, setAttendanceType] = useState<'شخصياً' | 'عبر معتمد' | 'وكيل'>('شخصياً');
@@ -222,7 +243,20 @@ export const AdminModule: React.FC = () => {
         AttachmentResponse: attachmentResp || editingRequest.AttachmentResponse,
         DeputyNotes: deputyNotes,
         AttendanceType: attendanceType,
-        DependencyStatus: dependencyStatus
+        DependencyStatus: dependencyStatus,
+        AttachedRequestImage: attachedScanImage || undefined,
+        ScanUploadedBy: attachedScanImage ? (scanUploadedBy || currentUser?.FullName || 'موظف الإدارة') : undefined,
+        ScanUploadedAt: attachedScanImage ? (scanUploadedAt || new Date().toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' })) : undefined,
+        ScanAttachments: attachedScanImage && attachedScanImage !== editingRequest.AttachedRequestImage ? [
+          ...(editingRequest.ScanAttachments || []),
+          {
+            id: `SCAN-${Date.now()}`,
+            url: attachedScanImage,
+            fileName: `مسح ضوئي: ${details.slice(0, 30)}`,
+            uploadedBy: currentUser?.FullName || 'موظف الإدارة',
+            uploadedAt: new Date().toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' })
+          }
+        ] : editingRequest.ScanAttachments
       });
 
       // Also sync citizen master record if name or phone changed
@@ -243,6 +277,9 @@ export const AdminModule: React.FC = () => {
         return;
       }
 
+      const nowStamp = new Date().toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' });
+      const currentUploader = currentUser?.FullName || 'موظف الإدارة';
+
       addRequest({
         Citizen_ID: citizen.Citizen_ID,
         CitizenName: citizen.FullName,
@@ -257,7 +294,19 @@ export const AdminModule: React.FC = () => {
         DeputyNotes: deputyNotes || undefined,
         AttendanceType: attendanceType,
         DependencyStatus: dependencyStatus,
-        CreatedBy: currentUser ? currentUser.FullName : 'قسم الإدارة'
+        CreatedBy: currentUser ? currentUser.FullName : 'قسم الإدارة',
+        AttachedRequestImage: attachedScanImage || undefined,
+        ScanUploadedBy: attachedScanImage ? currentUploader : undefined,
+        ScanUploadedAt: attachedScanImage ? nowStamp : undefined,
+        ScanAttachments: attachedScanImage ? [
+          {
+            id: `SCAN-${Date.now()}`,
+            url: attachedScanImage,
+            fileName: `مسح ضوئي: ${details.slice(0, 30)}`,
+            uploadedBy: currentUploader,
+            uploadedAt: nowStamp
+          }
+        ] : []
       });
 
       // If document attached, archive automatically
@@ -285,6 +334,25 @@ export const AdminModule: React.FC = () => {
     setDeputyNotes('');
     setAttendanceType('شخصياً');
     setDependencyStatus('مستقل');
+    setAttachedScanImage(null);
+    setScanUploadedBy('');
+    setScanUploadedAt('');
+  };
+
+  const handleUploadScanFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const result = uploadEvent.target?.result as string;
+        setAttachedScanImage(result);
+        const uploaderName = currentUser?.FullName || 'موظف الإدارة';
+        const nowStamp = new Date().toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' });
+        setScanUploadedBy(uploaderName);
+        setScanUploadedAt(nowStamp);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const openEditModal = (req: OfficeRequest) => {
@@ -303,6 +371,9 @@ export const AdminModule: React.FC = () => {
     const cit = citizenMap.get(req.Citizen_ID);
     setAttendanceType(req.AttendanceType || cit?.AttendanceType || 'شخصياً');
     setDependencyStatus(req.DependencyStatus || cit?.DependencyStatus || 'مستقل');
+    setAttachedScanImage(req.AttachedRequestImage || null);
+    setScanUploadedBy(req.ScanUploadedBy || '');
+    setScanUploadedAt(req.ScanUploadedAt || '');
   };
 
   const openCreateForCitizen = (citId: string) => {
@@ -312,6 +383,9 @@ export const AdminModule: React.FC = () => {
     const cit = citizenMap.get(citId);
     setAttendanceType(cit?.AttendanceType || 'شخصياً');
     setDependencyStatus(cit?.DependencyStatus || 'مستقل');
+    setAttachedScanImage(null);
+    setScanUploadedBy('');
+    setScanUploadedAt('');
     setShowAddModal(true);
   };
 
@@ -446,6 +520,18 @@ export const AdminModule: React.FC = () => {
         >
           <Users2 className="w-4 h-4 text-purple-600" />
           <span>قسم المعرفين وتزكيات المراجعين</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('department_staff')}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'department_staff'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'bg-white text-amber-900 hover:bg-amber-50 border border-amber-200'
+          }`}
+        >
+          <Users className="w-4 h-4 text-amber-600" />
+          <span>كادر قسم الإدارة والصلاحيات ({users.filter(u => u.Role === 'admin' || u.Department?.includes('الإدارة')).length} موظفين)</span>
         </button>
       </div>
 
@@ -609,7 +695,7 @@ export const AdminModule: React.FC = () => {
                     <th className="p-3">المسار الإداري</th>
                     <th className="p-3">المسار والمرحلة</th>
                     <th className="p-3">الأولوية</th>
-                    <th className="p-3">المرفقات</th>
+                    <th className="p-3">المرفقات وصورة الاسكنر</th>
                     <th className="p-3 text-center">الإجراءات والمسح</th>
                   </tr>
                 </thead>
@@ -686,7 +772,33 @@ export const AdminModule: React.FC = () => {
                           </span>
                         </td>
                         <td className="p-3">
-                          {req.AttachmentRequest || req.AttachmentResponse ? (
+                          {req.AttachedRequestImage ? (
+                            <div 
+                              onClick={() => setFullPreviewScan({
+                                url: req.AttachedRequestImage!,
+                                uploadedBy: req.ScanUploadedBy || 'موظف الإدارة',
+                                uploadedAt: req.ScanUploadedAt || req.CreatedAt,
+                                requestTitle: req.Details,
+                                citizenName: req.CitizenName
+                              })}
+                              className="p-1 rounded bg-blue-50/80 border border-blue-200 hover:bg-blue-100/90 transition-all flex items-center gap-1.5 cursor-pointer max-w-[170px]"
+                              title="انقر لمعاينة صورة الاسكنر المحفوظة كما هي مع اسم الموظف والتاريخ"
+                            >
+                              <img 
+                                src={req.AttachedRequestImage} 
+                                alt="اسكنر" 
+                                className="w-7 h-9 object-cover rounded shadow-2xs border border-slate-200 shrink-0" 
+                              />
+                              <div className="text-[10px] text-right leading-tight min-w-0">
+                                <span className="font-bold text-blue-900 block truncate" title={req.ScanUploadedBy}>
+                                  {req.ScanUploadedBy || 'موظف الإدارة'}
+                                </span>
+                                <span className="text-[9px] font-mono text-slate-500 block truncate">
+                                  {req.ScanUploadedAt || req.CreatedAt}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (req.AttachmentRequest || req.AttachmentResponse) ? (
                             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold">
                               <Paperclip className="w-3 h-3" />
                               <span>مرفق</span>
@@ -972,6 +1084,134 @@ export const AdminModule: React.FC = () => {
             </div>
           </div>
           <ReferrersStats />
+        </div>
+      )}
+
+      {/* Tab 6: Department Staff & Permissions Management (كادر موظفي قسم الإدارة والصلاحيات) */}
+      {activeTab === 'department_staff' && (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-l from-blue-950 via-slate-900 to-indigo-950 text-white rounded-2xl p-5 border border-blue-800/40 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-blue-600/30 text-blue-400 border border-blue-500/30">
+                  <Users className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold flex items-center gap-2 text-white">
+                    <span>كادر موظفي قسم الإدارة والمعاملات (4 موظفين)</span>
+                  </h3>
+                  <p className="text-xs text-blue-200">
+                    يمكنك تبديل حساب الموظف النشط للعمل فوراً، حيث يتم توثيق اسم الموظف وتاريخ المسح الضوئي تلقائياً عند حفظ أي سكنر للمعاملة.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveSection('master_admin')}
+                className="px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>إدارة وتعديل الصلاحيات بالكامل (Master Admin)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Active Workstation Banner */}
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="text-xs">
+                <span className="text-emerald-900 font-bold">الموظف المسجل حالياً في هذا الجهاز: </span>
+                <span className="text-emerald-950 font-extrabold text-sm">{currentUser?.FullName}</span>
+                <span className="text-emerald-700 mx-2">({currentUser?.RoleArabic} - {currentUser?.Department})</span>
+              </div>
+            </div>
+            <span className="text-[11px] text-emerald-800 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 font-bold">
+              أي عملية رفع اسكنر ستوثّق باسم: {currentUser?.FullName}
+            </span>
+          </div>
+
+          {/* Department Staff Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {users
+              .filter(u => u.Role === 'admin' || u.Department?.includes('الإدارة'))
+              .map((staffMember, idx) => {
+                const isCurrent = currentUser?.User_ID === staffMember.User_ID;
+                const staffPerms = staffMember.Permissions || [];
+                return (
+                  <div
+                    key={staffMember.User_ID || idx}
+                    className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                      isCurrent
+                        ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-400/40 shadow-sm'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-900 text-sm">{staffMember.FullName}</h4>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                            {staffMember.RoleArabic}
+                          </span>
+                          {isCurrent && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white">
+                              ✓ الحساب النشط الآن
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-500 font-mono flex items-center gap-2">
+                          <span>اسم الدخول: <strong className="text-slate-700">{staffMember.Username}</strong></span>
+                          <span>•</span>
+                          <span>القسم: {staffMember.Department}</span>
+                          <span>•</span>
+                          <span className={staffMember.Status === 'frozen' ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}>
+                            {staffMember.Status === 'frozen' ? 'مجمّد' : 'نشط'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {!isCurrent && (
+                        <button
+                          type="button"
+                          onClick={() => switchUser(staffMember)}
+                          className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors shrink-0"
+                          title="تفعيل هذا الموظف لإجراء المعاملات ورفع الاسكنر باسمه"
+                        >
+                          <LogIn className="w-3.5 h-3.5" />
+                          <span>تفعيل الموظف</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Permissions list */}
+                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                      <div className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                        <span>الصلاحيات المخصصة لهذا الموظف ({staffPerms.length})</span>
+                        <span className="text-[10px] text-blue-700 font-mono">ID: {staffMember.User_ID}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {staffPerms.map(pid => {
+                          const pDef = SYSTEM_PERMISSIONS.find(p => p.id === pid);
+                          return (
+                            <span
+                              key={pid}
+                              className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-800 border border-slate-200 transition-colors font-medium flex items-center gap-1"
+                            >
+                              <CheckCircle className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>{pDef?.name || pid}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       )}
 
@@ -1270,6 +1510,85 @@ export const AdminModule: React.FC = () => {
                 </div>
               </div>
 
+              {/* Direct Scanner Document Section (حفظ صورة الاسكنر كما هي + اسم الموظف والتاريخ) */}
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                    <Scan className="w-4 h-4 text-blue-700" />
+                    <span>إرفاق صورة الاسكنر للطلب (حفظ الصورة كما هي مع توثيق اسم الموظف والتاريخ)</span>
+                  </label>
+                  <span className="text-[10px] text-blue-800 bg-white px-2 py-0.5 rounded font-mono border border-blue-200 font-bold">
+                    الموظف الموثق: {currentUser?.FullName || 'موظف الإدارة'}
+                  </span>
+                </div>
+
+                {attachedScanImage ? (
+                  <div className="p-2.5 bg-white rounded-lg border border-blue-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={attachedScanImage} 
+                        alt="Scan Preview" 
+                        className="w-14 h-16 object-cover rounded border border-slate-200 shadow-xs" 
+                      />
+                      <div className="text-xs space-y-0.5">
+                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>تم ربط صورة الاسكنر بنجاح</span>
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          بواسطة الموظف: <strong className="text-blue-900">{scanUploadedBy || currentUser?.FullName}</strong>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          التاريخ: {scanUploadedAt || new Date().toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setFullPreviewScan({
+                          url: attachedScanImage,
+                          uploadedBy: scanUploadedBy || currentUser?.FullName || 'موظف الإدارة',
+                          uploadedAt: scanUploadedAt || new Date().toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' }),
+                          requestTitle: details || 'معاينة المسح الضوئي',
+                          citizenName: editableCitizenName || 'المواطن'
+                        })}
+                        className="p-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold"
+                        title="معاينة بالحجم الكامل"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachedScanImage(null);
+                          setScanUploadedBy('');
+                          setScanUploadedAt('');
+                        }}
+                        className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold"
+                        title="إلغاء المرفق"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <label className="flex-1 border-2 border-dashed border-blue-300 hover:border-blue-500 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition-colors group">
+                      <Upload className="w-5 h-5 text-blue-600 mb-1 group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold text-blue-900">انقر لاختيار صورة المسح الضوئي (Scanner Image)</span>
+                      <span className="text-[10px] text-slate-500">تُحفظ الصورة بدون تغيير ويُسجل اسم الموظف والتاريخ تلقائياً</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleUploadScanFile} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
               {/* Deputy Notes */}
               <div>
                 <label className="block text-xs font-bold text-amber-800 mb-1">توجيه وقرار النائب (إن وجد)</label>
@@ -1379,6 +1698,85 @@ export const AdminModule: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Full Preview Scan Modal */}
+      {fullPreviewScan && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-right">
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="space-y-0.5">
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  <Scan className="w-4 h-4 text-amber-400" />
+                  <span>معاينة صورة الاسكنر الأصلية للطلب</span>
+                </h3>
+                <p className="text-[11px] text-slate-300">
+                  {fullPreviewScan.citizenName} • {fullPreviewScan.requestTitle}
+                </p>
+              </div>
+              <button
+                onClick={() => setFullPreviewScan(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 bg-slate-100 flex-1 overflow-auto flex items-center justify-center min-h-[300px]">
+              <img 
+                src={fullPreviewScan.url} 
+                alt="Original Scan" 
+                className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-md border border-slate-300" 
+              />
+            </div>
+
+            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs flex-wrap gap-2">
+              <div className="space-y-0.5">
+                <div className="text-slate-800 font-bold">
+                  الموظف الموثق: <span className="text-blue-900 font-extrabold">{fullPreviewScan.uploadedBy}</span>
+                </div>
+                <div className="text-slate-500 font-mono text-[11px]">
+                  تاريخ وتوقيت المسح: {fullPreviewScan.uploadedAt}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={fullPreviewScan.url}
+                  download={`scan-${Date.now()}.png`}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold flex items-center gap-1.5 shadow-2xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>تنزيل الصورة</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const printWindow = window.open('', '_blank');
+                    if (printWindow) {
+                      printWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>طباعة صورة المسح الضوئي</title>
+                            <style>body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; } img { max-width: 100%; height: auto; }</style>
+                          </head>
+                          <body onload="window.print()">
+                            <img src="${fullPreviewScan.url}" />
+                          </body>
+                        </html>
+                      `);
+                      printWindow.document.close();
+                    }
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>طباعة فورية</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Request Drafter Modal */}
       <AiRequestDrafterModal
         isOpen={showAiDrafterModal}

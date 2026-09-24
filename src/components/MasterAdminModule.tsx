@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { DropdownCategory, UserRole, User } from '../types';
+import { DropdownCategory, UserRole, User, SYSTEM_PERMISSIONS } from '../types';
 import { 
   Settings, 
   Users, 
@@ -27,7 +27,9 @@ import {
   Laptop,
   Terminal,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Scan,
+  LogIn
 } from 'lucide-react';
 import { AiRequestDrafterModal } from './AiRequestDrafterModal';
 
@@ -38,8 +40,9 @@ export const MasterAdminModule: React.FC = () => {
     removeDropdownItem, 
     users, 
     addUser, 
-    updateUser,
+    updateUser, 
     deleteUser,
+    switchUser,
     systemSettings, 
     updateSystemSettings, 
     resetToInitialData,
@@ -71,13 +74,22 @@ export const MasterAdminModule: React.FC = () => {
   const [editRole, setEditRole] = useState<UserRole>('admin');
   const [editDepartment, setEditDepartment] = useState('');
   const [editStatus, setEditStatus] = useState<'active' | 'frozen'>('active');
+  const [editPermissions, setEditPermissions] = useState<string[]>([
+    'scan_upload', 'requests_create', 'requests_edit', 'workflow_referral', 'view_archive'
+  ]);
 
   // New User Form State
   const [newUserName, setNewUserName] = useState('');
   const [newUserFullName, setNewUserFullName] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserRole, setNewUserRole] = useState<UserRole>('reception');
-  const [newUserDepartment, setNewUserDepartment] = useState('قسم الاستعلامات والمراجعين');
+  const [newUserRole, setNewUserRole] = useState<UserRole>('admin');
+  const [newUserDepartment, setNewUserDepartment] = useState('قسم الإدارة والمعاملات');
+  const [newUserPermissions, setNewUserPermissions] = useState<string[]>([
+    'scan_upload', 'requests_create', 'requests_edit', 'workflow_referral', 'view_archive'
+  ]);
+
+  // Department filter for user list
+  const [userDepartmentFilter, setUserDepartmentFilter] = useState<string>('all');
 
   // General System State
   const [appName, setAppName] = useState(systemSettings.appName);
@@ -156,10 +168,11 @@ export const MasterAdminModule: React.FC = () => {
       Role: newUserRole,
       RoleArabic: roleMap[newUserRole] || 'موظف معتمد',
       Department: newUserDepartment.trim(),
-      Status: 'active'
+      Status: 'active',
+      Permissions: newUserPermissions
     });
 
-    setSuccessMessage(`تم إنشاء حساب الموظف (${newUserFullName}) وتعيين صلاحياته بنجاح.`);
+    setSuccessMessage(`تم إنشاء حساب الموظف (${newUserFullName}) وتعيين الصلاحيات (${newUserPermissions.length} صلاحية) بنجاح.`);
     setNewUserName('');
     setNewUserFullName('');
     setNewUserPassword('');
@@ -173,6 +186,10 @@ export const MasterAdminModule: React.FC = () => {
     setEditRole(user.Role);
     setEditDepartment(user.Department);
     setEditStatus(user.Status || 'active');
+    setEditPermissions(user.Permissions && user.Permissions.length > 0 
+      ? user.Permissions 
+      : ['scan_upload', 'requests_create', 'view_archive']
+    );
   };
 
   const handleSaveEditUser = (e: React.FormEvent) => {
@@ -190,7 +207,8 @@ export const MasterAdminModule: React.FC = () => {
       Role: editRole,
       RoleArabic: roleMap[editRole] || targetUser.RoleArabic,
       Department: editDepartment.trim(),
-      Status: editStatus
+      Status: editStatus,
+      Permissions: editPermissions
     };
 
     updateUser(updatedUser);
@@ -612,12 +630,72 @@ export const MasterAdminModule: React.FC = () => {
                     </select>
                   </div>
 
+                  {/* Permissions Checklist for Edit */}
+                  <div className="space-y-2 pt-2 border-t border-slate-150">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-orange-600" />
+                        <span>الصلاحيات الممنوحة للموظف ({editPermissions.length}/{SYSTEM_PERMISSIONS.length})</span>
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditPermissions(SYSTEM_PERMISSIONS.map(p => p.id))}
+                          className="text-[10px] text-orange-700 hover:underline font-bold"
+                        >
+                          منح الكل
+                        </button>
+                        <span className="text-slate-300">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditPermissions([])}
+                          className="text-[10px] text-slate-500 hover:underline"
+                        >
+                          تفريغ
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+                      {SYSTEM_PERMISSIONS.map((perm) => {
+                        const isChecked = editPermissions.includes(perm.id);
+                        return (
+                          <label 
+                            key={perm.id} 
+                            className={`flex items-start gap-2 p-1.5 rounded-lg border text-right cursor-pointer transition-all ${
+                              isChecked 
+                                ? 'bg-orange-50 border-orange-200 text-orange-950 font-semibold' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setEditPermissions([...editPermissions, perm.id]);
+                                } else {
+                                  setEditPermissions(editPermissions.filter(p => p !== perm.id));
+                                }
+                              }}
+                              className="mt-0.5 rounded text-orange-600 focus:ring-orange-500"
+                            />
+                            <div className="text-[11px] leading-tight">
+                              <div>{perm.name}</div>
+                              <div className="text-[9px] text-slate-400 font-normal">{perm.category}</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="pt-2 flex items-center gap-2">
                     <button
                       type="submit"
                       className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
                     >
-                      حفظ التعديلات
+                      حفظ التعديلات وتثبيت الصلاحيات
                     </button>
                     <button
                       type="button"
@@ -674,12 +752,25 @@ export const MasterAdminModule: React.FC = () => {
                       onChange={(e) => {
                         const r = e.target.value as UserRole;
                         setNewUserRole(r);
-                        if (r === 'reception') setNewUserDepartment('قسم الاستعلامات والمراجعين');
-                        else if (r === 'admin') setNewUserDepartment('قسم الإدارة والمعاملات');
-                        else if (r === 'interviews_officer') setNewUserDepartment('قسم مقابلات النائب');
-                        else if (r === 'organization') setNewUserDepartment('قسم التنظيم والجماهير');
-                        else if (r === 'machine') setNewUserDepartment('قسم مكنة وطباعة الكتب');
-                        else if (r === 'audit') setNewUserDepartment('قسم الرقابة والتشريع');
+                        if (r === 'reception') {
+                          setNewUserDepartment('قسم الاستعلامات والمراجعين');
+                          setNewUserPermissions(['citizens_register', 'print_cards', 'view_archive', 'scan_upload']);
+                        } else if (r === 'admin') {
+                          setNewUserDepartment('قسم الإدارة والمعاملات');
+                          setNewUserPermissions(['scan_upload', 'requests_create', 'requests_edit', 'workflow_referral', 'view_archive']);
+                        } else if (r === 'interviews_officer') {
+                          setNewUserDepartment('قسم مقابلات النائب');
+                          setNewUserPermissions(['interviews_manage', 'workflow_referral', 'view_archive']);
+                        } else if (r === 'organization') {
+                          setNewUserDepartment('قسم التنظيم والجماهير');
+                          setNewUserPermissions(['org_evaluation', 'workflow_referral', 'view_archive', 'export_reports']);
+                        } else if (r === 'machine') {
+                          setNewUserDepartment('قسم مكنة وطباعة الكتب');
+                          setNewUserPermissions(['official_letters', 'scan_upload', 'view_archive']);
+                        } else if (r === 'audit') {
+                          setNewUserDepartment('قسم الرقابة والتشريع');
+                          setNewUserPermissions(['requests_edit', 'export_reports', 'view_archive']);
+                        }
                       }}
                       className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-orange-500 text-orange-800"
                     >
@@ -704,13 +795,73 @@ export const MasterAdminModule: React.FC = () => {
                     />
                   </div>
 
+                  {/* Permissions Checklist for New User */}
+                  <div className="space-y-2 pt-2 border-t border-slate-150">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-orange-600" />
+                        <span>الصلاحيات الممنوحة للموظف الجديد ({newUserPermissions.length}/{SYSTEM_PERMISSIONS.length})</span>
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setNewUserPermissions(SYSTEM_PERMISSIONS.map(p => p.id))}
+                          className="text-[10px] text-orange-700 hover:underline font-bold"
+                        >
+                          منح الكل
+                        </button>
+                        <span className="text-slate-300">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setNewUserPermissions([])}
+                          className="text-[10px] text-slate-500 hover:underline"
+                        >
+                          تفريغ
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+                      {SYSTEM_PERMISSIONS.map((perm) => {
+                        const isChecked = newUserPermissions.includes(perm.id);
+                        return (
+                          <label 
+                            key={perm.id} 
+                            className={`flex items-start gap-2 p-1.5 rounded-lg border text-right cursor-pointer transition-all ${
+                              isChecked 
+                                ? 'bg-orange-50 border-orange-200 text-orange-950 font-semibold' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setNewUserPermissions([...newUserPermissions, perm.id]);
+                                } else {
+                                  setNewUserPermissions(newUserPermissions.filter(p => p !== perm.id));
+                                }
+                              }}
+                              className="mt-0.5 rounded text-orange-600 focus:ring-orange-500"
+                            />
+                            <div className="text-[11px] leading-tight">
+                              <div>{perm.name}</div>
+                              <div className="text-[9px] text-slate-400 font-normal">{perm.category}</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="pt-2">
                     <button
                       type="submit"
                       className="w-full py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>إضافة حساب الموظف وتفعيل دوره</span>
+                      <span>إضافة حساب الموظف وتثبيت الصلاحيات</span>
                     </button>
                   </div>
                 </form>
@@ -719,71 +870,153 @@ export const MasterAdminModule: React.FC = () => {
 
             {/* List Column (7 Cols) */}
             <div className="lg:col-span-7 rounded-2xl bg-white border border-slate-200 p-5 space-y-3.5 shadow-xs">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-orange-600" />
-                  <span>كادر وموظفي أقسام المكتب المسجلين ({users.length})</span>
-                </h4>
-                <span className="text-[11px] text-slate-500">انقر على "تعديل" لتغيير الصلاحية أو كلمة المرور</span>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-orange-600" />
+                    <span>كادر وموظفي أقسام المكتب المسجلين ({users.length})</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-500">توزيع الكوادر (4 موظفين بالإدارة، 2 بالاستعلامات، إلخ) وتخصيص الصلاحيات</span>
+                </div>
+                <span className="text-[10px] text-orange-700 bg-orange-50 font-bold px-2 py-0.5 rounded border border-orange-200">
+                  يمكن التبديل المباشر بين الموظفين للعمل
+                </span>
               </div>
 
-              <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
-                {users.map((u, idx) => {
-                  const isCurrent = currentUser?.User_ID === u.User_ID;
-                  return (
-                    <div
-                      key={`${u.User_ID}-${idx}`}
-                      className={`p-3.5 rounded-xl border transition-colors flex items-center justify-between gap-3 ${
-                        isCurrent 
-                          ? 'bg-orange-50/50 border-orange-200' 
-                          : 'bg-slate-50 border-slate-200 hover:bg-slate-100/60'
-                      }`}
-                    >
-                      <div className="space-y-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 text-xs truncate">{u.FullName}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-orange-800 border border-orange-200 shrink-0">
-                            {u.RoleArabic}
-                          </span>
-                          {isCurrent && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-600 text-white shrink-0">
-                              أنت (الحساب الحالي)
-                            </span>
+              {/* Department Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                {[
+                  { id: 'all', label: 'كافة الأقسام', count: users.length },
+                  { id: 'admin', label: 'قسم الإدارة (4)', count: users.filter(u => u.Role === 'admin' || u.Department?.includes('الإدارة')).length },
+                  { id: 'reception', label: 'قسم الاستعلامات (2)', count: users.filter(u => u.Role === 'reception' || u.Department?.includes('الاستعلامات')).length },
+                  { id: 'organization', label: 'قسم التنظيم', count: users.filter(u => u.Role === 'organization' || u.Department?.includes('التنظيم')).length },
+                  { id: 'machine', label: 'قسم المكنة', count: users.filter(u => u.Role === 'machine' || u.Department?.includes('المكنة')).length },
+                  { id: 'audit', label: 'قسم الرقابة', count: users.filter(u => u.Role === 'audit' || u.Department?.includes('الرقابة')).length },
+                ].map(dept => (
+                  <button
+                    key={dept.id}
+                    type="button"
+                    onClick={() => setUserDepartmentFilter(dept.id)}
+                    className={`px-2.5 py-1 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
+                      userDepartmentFilter === dept.id
+                        ? 'bg-orange-600 text-white shadow-2xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {dept.label} ({dept.count})
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
+                {users
+                  .filter(u => {
+                    if (userDepartmentFilter === 'all') return true;
+                    if (userDepartmentFilter === 'admin') return u.Role === 'admin' || u.Department?.includes('الإدارة');
+                    if (userDepartmentFilter === 'reception') return u.Role === 'reception' || u.Department?.includes('الاستعلامات');
+                    if (userDepartmentFilter === 'organization') return u.Role === 'organization' || u.Department?.includes('التنظيم');
+                    if (userDepartmentFilter === 'machine') return u.Role === 'machine' || u.Department?.includes('المكنة');
+                    if (userDepartmentFilter === 'audit') return u.Role === 'audit' || u.Department?.includes('الرقابة');
+                    return true;
+                  })
+                  .map((u, idx) => {
+                    const isCurrent = currentUser?.User_ID === u.User_ID;
+                    const userPerms = u.Permissions || [];
+                    return (
+                      <div
+                        key={`${u.User_ID}-${idx}`}
+                        className={`p-3.5 rounded-xl border transition-all space-y-2 ${
+                          isCurrent 
+                            ? 'bg-orange-50/70 border-orange-300 ring-1 ring-orange-200' 
+                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100/70'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-slate-900 text-xs">{u.FullName}</span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-orange-800 border border-orange-200 shrink-0">
+                                {u.RoleArabic}
+                              </span>
+                              {isCurrent ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-600 text-white shrink-0">
+                                  ✓ أنت (المستخدم النشط حالياً)
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-mono text-slate-400">ID: {u.User_ID}</span>
+                              )}
+                            </div>
+                            <div className="text-slate-500 font-mono text-[11px] flex items-center gap-2 flex-wrap">
+                              <span>اليوزر: <strong className="text-slate-800">{u.Username}</strong></span>
+                              <span>•</span>
+                              <span>القسم: <strong className="text-blue-900 font-bold">{u.Department}</strong></span>
+                              <span>•</span>
+                              <span className={u.Status === 'frozen' ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}>
+                                {u.Status === 'frozen' ? 'مجمّد' : 'نشط'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {!isCurrent && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  switchUser(u);
+                                  setSuccessMessage(`تم تبديل المستخدم النشط فوراً إلى: ${u.FullName} (${u.RoleArabic})`);
+                                }}
+                                className="px-2.5 py-1.5 rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-900 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                title="تشغيل المنظومة بهذا الحساب الآن"
+                              >
+                                <LogIn className="w-3.5 h-3.5 text-orange-700" />
+                                <span>تفعيل الحساب</span>
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => startEditUser(u)}
+                              className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                              title="تعديل الصلاحيات وكلمة المرور"
+                            >
+                              <Edit2 className="w-3 h-3 text-slate-600" />
+                              <span>تعديل</span>
+                            </button>
+
+                            {!isCurrent && (
+                              <button
+                                onClick={() => handleDeleteUserClick(u.User_ID, u.FullName)}
+                                className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 cursor-pointer transition-colors"
+                                title="حذف الحساب"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Permissions badges row */}
+                        <div className="pt-1.5 border-t border-slate-200/60 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-slate-500 font-medium">الصلاحيات الممنوحة:</span>
+                          {userPerms.length === 0 ? (
+                            <span className="text-[10px] text-slate-400">لا توجد صلاحيات محددة</span>
+                          ) : (
+                            userPerms.map(pid => {
+                              const pDef = SYSTEM_PERMISSIONS.find(p => p.id === pid);
+                              return (
+                                <span 
+                                  key={pid}
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium"
+                                  title={pDef?.description || pid}
+                                >
+                                  {pDef?.name || pid}
+                                </span>
+                              );
+                            })
                           )}
                         </div>
-                        <div className="text-slate-500 font-mono text-[11px] flex items-center gap-2">
-                          <span>اليوزر: <strong className="text-slate-800">{u.Username}</strong></span>
-                          <span>•</span>
-                          <span>القسم: {u.Department}</span>
-                          <span>•</span>
-                          <span className={u.Status === 'frozen' ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'}>
-                            {u.Status === 'frozen' ? 'مجمّد' : 'نشط'}
-                          </span>
-                        </div>
                       </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          onClick={() => startEditUser(u)}
-                          className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                          title="تعديل الصلاحيات وكلمة المرور"
-                        >
-                          <Edit2 className="w-3 h-3 text-slate-600" />
-                          <span>تعديل</span>
-                        </button>
-                        {!isCurrent && (
-                          <button
-                            onClick={() => handleDeleteUserClick(u.User_ID, u.FullName)}
-                            className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 cursor-pointer transition-colors"
-                            title="حذف الحساب"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </div>
           </div>

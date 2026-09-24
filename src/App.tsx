@@ -47,6 +47,45 @@ const MainAppLayout: React.FC = () => {
     }
   }, [departmentGreeting, setDepartmentGreeting]);
 
+  // Helper to determine the home workspace for each role
+  const getHomeSectionForRole = (role?: string): string => {
+    switch (role) {
+      case 'reception':
+      case 'reception_officer':
+        return 'reception';
+      case 'admin':
+      case 'admin_officer':
+        return 'admin';
+      case 'interviews_officer':
+        return 'interviews';
+      case 'organization':
+      case 'organization_officer':
+        return 'organization';
+      case 'machine':
+      case 'machine_officer':
+        return 'machine';
+      case 'audit':
+        return 'audit';
+      case 'archive':
+        return 'search_archive';
+      case 'developer':
+      case 'director':
+      case 'deputy':
+      default:
+        return 'dashboard';
+    }
+  };
+
+  // If a department staff member lands on the executive dashboard, automatically redirect them to their department
+  React.useEffect(() => {
+    if (currentUser) {
+      const isSuper = ['developer', 'director', 'deputy'].includes(currentUser.Role);
+      if (!isSuper && activeSection === 'dashboard') {
+        setActiveSection(getHomeSectionForRole(currentUser.Role));
+      }
+    }
+  }, [currentUser, activeSection, setActiveSection]);
+
   if (!isAuthenticated) {
     return <SplashLanding />;
   }
@@ -57,33 +96,37 @@ const MainAppLayout: React.FC = () => {
     const role = currentUser.Role;
     if (role === 'developer' || role === 'director' || role === 'deputy') return true;
 
+    // The central dashboard ('dashboard') is strictly for Developer and Director
+    if (section === 'dashboard') return false;
+
     switch (role) {
       case 'reception':
       case 'reception_officer':
-        return ['dashboard', 'reception', 'search_archive', 'whatsapp'].includes(section);
+        return ['reception', 'search_archive', 'reports', 'whatsapp'].includes(section);
       case 'admin':
       case 'admin_officer':
-        return ['dashboard', 'admin', 'drive_requests', 'search_archive', 'reports', 'whatsapp'].includes(section);
+        return ['admin', 'drive_requests', 'search_archive', 'reports', 'whatsapp'].includes(section);
       case 'interviews_officer':
-        return ['dashboard', 'interviews', 'search_archive', 'whatsapp'].includes(section);
+        return ['interviews', 'search_archive', 'reports', 'whatsapp'].includes(section);
       case 'organization':
       case 'organization_officer':
-        return ['dashboard', 'organization', 'search_archive', 'whatsapp'].includes(section);
+        return ['organization', 'search_archive', 'reports', 'whatsapp'].includes(section);
       case 'machine':
       case 'machine_officer':
-        return ['dashboard', 'machine', 'search_archive', 'reports'].includes(section);
+        return ['machine', 'search_archive', 'reports'].includes(section);
       case 'audit':
-        return ['dashboard', 'audit', 'search_archive', 'reports'].includes(section);
+        return ['audit', 'search_archive', 'reports'].includes(section);
       case 'archive':
-        return ['dashboard', 'search_archive', 'reports'].includes(section);
+        return ['search_archive', 'reports'].includes(section);
       default:
-        return ['dashboard', 'search_archive'].includes(section);
+        return ['search_archive', 'reports'].includes(section);
     }
   };
 
   const renderActiveModule = () => {
     // If the employee is trying to access a section outside their department/role, redirect safely
     if (!canUserAccess(activeSection)) {
+      const homeSec = getHomeSectionForRole(currentUser?.Role);
       return (
         <div className="p-8 bg-white rounded-2xl border border-slate-200 text-center space-y-4 max-w-lg mx-auto shadow-xs">
           <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-xl font-bold">
@@ -96,10 +139,10 @@ const MainAppLayout: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={() => setActiveSection('dashboard')}
+            onClick={() => setActiveSection(homeSec)}
             className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer"
           >
-            العودة للوحة الرئيسية
+            العودة إلى قسمك المعتمد ({currentUser?.RoleArabic})
           </button>
         </div>
       );

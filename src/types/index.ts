@@ -14,6 +14,27 @@ export type UserRole =
   | 'organization_officer'
   | 'machine_officer';
 
+export interface PermissionDefinition {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+}
+
+export const SYSTEM_PERMISSIONS: PermissionDefinition[] = [
+  { id: 'scan_upload', name: 'رفع ومسح المستندات بالسكانر', category: 'السكانر والأرشفة', description: 'رفع صور المستندات وحفظ السكنر في الطلبات' },
+  { id: 'requests_create', name: 'تسجيل وإنشاء طلبات المواطنين', category: 'المعاملات', description: 'إضافة كتب وطلبات جديدة للمراجعين' },
+  { id: 'requests_edit', name: 'تعديل المعاملات وتحديث الحالة', category: 'المعاملات', description: 'تعديل الجهة، الحالة، الأولوية وهامش المعاملة' },
+  { id: 'requests_delete', name: 'حذف المعاملات والطلبات', category: 'المعاملات', description: 'صلاحية حذف المعاملة من السجلات' },
+  { id: 'workflow_referral', name: 'إحالة مسار المعاملة بين الأقسام', category: 'المسار الإداري', description: 'إحالة المعاملة للمكتب، الإدارة، أو التنظيم' },
+  { id: 'citizens_register', name: 'تسجيل وتعديل بيانات المراجعين', category: 'الاستعلامات', description: 'إدخال مراجع جديد بالاستعلامات وتحديث بياناته' },
+  { id: 'print_cards', name: 'طباعة الباجات والباركودات', category: 'الطباعة', description: 'طباعة باجات المراجعين والباركود الذكي' },
+  { id: 'org_evaluation', name: 'التقييم التنظيمي والنتيجة النهائية', category: 'التنظيم', description: 'تثبيت النتائج الـ 4، استبيان الرضا، والمفاتيح' },
+  { id: 'official_letters', name: 'تحرير وطباعة الكتب والمخاطبات', category: 'المكنة والطباعة', description: 'إصدار الكتب الرسمية وإدراج الهوامش' },
+  { id: 'export_reports', name: 'تصدير التقارير وسجلات الإكسل', category: 'التقارير', description: 'تصدير إحصائيات الأداء وسجلات المراجعين' },
+  { id: 'view_archive', name: 'الاطلاع على الأرشيف والسجل العام', category: 'الأرشيف', description: 'معاينة أرشيف الصور والملفات والسجل التاريخي' }
+];
+
 export interface User {
   User_ID: string;
   Username: string;
@@ -26,6 +47,7 @@ export interface User {
   Department: string;
   Avatar?: string;
   CreatedAt?: string;
+  Permissions?: string[]; // الصلاحيات الممنوحة للموظف
 }
 
 export type CitizenRating = 'لائق' | 'غير لائق' | 'قلق' | 'غير محترم' | string;
@@ -83,6 +105,15 @@ export type RequestStatus = 'مستلم' | 'غير مستلم' | 'معاد' | '�
 export type ProcessingStatus = 'منجز' | 'قيد الإجراء' | 'قيد التدقيق' | 'مرفوض' | 'تم الطباعة' | 'مرسل إلى الوزارة/الهيئة' | 'بانتظار الموافقة' | 'مسودة';
 export type Priority = 'عاجل' | 'عام' | 'خاص جداً';
 
+export interface RequestScanAttachment {
+  id: string;
+  url: string;               // صورة الاسكنر كما هي
+  fileName?: string;         // اسم الملف
+  uploadedBy: string;        // اسم الموظف القائم بالرفع
+  uploadedAt: string;        // تاريخ ووقت الرفع
+  notes?: string;            // ملاحظات
+}
+
 export interface OfficeRequest {
   Request_ID: string;
   Citizen_ID: string;
@@ -95,7 +126,10 @@ export interface OfficeRequest {
   Details: string;
   AttachmentRequest?: string;  // الطلب المقدم
   AttachmentResponse?: string; // الطلب المستلم / كتاب الإجابة
-  AttachedRequestImage?: string; // صورة أو مسح الطلب المرفق
+  AttachedRequestImage?: string; // صورة أو مسح الطلب المرفق كما هي
+  ScanUploadedBy?: string;     // اسم الموظف الذي قام برفع الاسكنر
+  ScanUploadedAt?: string;     // تاريخ ووقت رفع الاسكنر
+  ScanAttachments?: RequestScanAttachment[]; // سجل بكافة صور الاسكنر المرفقة مع اسم الموظف والتاريخ
   CreatedAt: string;
   CreatedDate?: string;
   CreatedBy: string;

@@ -31,10 +31,45 @@ export const DepartmentWorkReportsModal: React.FC<DepartmentWorkReportsModalProp
   onClose,
   defaultDepartment = 'reception'
 }) => {
-  const { citizens, requests, interviews, organizationRecords, addAuditLog } = useApp();
+  const { citizens, requests, interviews, organizationRecords, addAuditLog, currentUser } = useApp();
 
-  const [department, setDepartment] = useState<DepartmentType>(defaultDepartment);
+  // Role and Department Access Logic: Developer & Director have full access; others locked to their department
+  const isSuperUser = ['developer', 'director', 'deputy'].includes(currentUser?.Role || '');
+  const userRole = currentUser?.Role || '';
+  const userDept = currentUser?.Department || '';
+
+  const userAuthorizedDept: DepartmentType = useMemo(() => {
+    if (userRole === 'reception' || userRole === 'reception_officer' || userDept.includes('الاستعلامات')) {
+      return 'reception';
+    }
+    if (userRole === 'admin' || userRole === 'admin_officer' || userDept.includes('الإدارة')) {
+      return 'admin';
+    }
+    if (userRole === 'interviews_officer' || userDept.includes('المقابلات')) {
+      return 'interviews';
+    }
+    if (userRole === 'organization' || userRole === 'organization_officer' || userDept.includes('التنظيم')) {
+      return 'organization';
+    }
+    return defaultDepartment;
+  }, [userRole, userDept, defaultDepartment]);
+
+  const [department, setDepartment] = useState<DepartmentType>(isSuperUser ? defaultDepartment : userAuthorizedDept);
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
+
+  // Enforce department locking whenever modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      if (!isSuperUser) {
+        setDepartment(userAuthorizedDept);
+      } else if (defaultDepartment) {
+        setDepartment(defaultDepartment);
+      }
+      setSelectedRecordIds(new Set());
+    }
+  }, [isOpen, isSuperUser, userAuthorizedDept, defaultDepartment]);
+
+  const effectiveDepartment: DepartmentType = isSuperUser ? department : userAuthorizedDept;
   
   // Custom date range
   const todayStr = new Date().toISOString().split('T')[0];
@@ -88,7 +123,7 @@ export const DepartmentWorkReportsModal: React.FC<DepartmentWorkReportsModalProp
       return cleanDate >= dateRange.start && cleanDate <= dateRange.end;
     };
 
-    if (department === 'reception') {
+    if (effectiveDepartment === 'reception') {
       return citizens.filter(c => isWithinDate(c.CreatedAt)).map(c => ({
         id: c.Citizen_ID,
         name: c.FullName,
@@ -101,7 +136,7 @@ export const DepartmentWorkReportsModal: React.FC<DepartmentWorkReportsModalProp
       }));
     }
 
-    if (department === 'organization') {
+    if (effectiveDepartment === 'organization') {
       return organizationRecords.filter(o => isWithinDate(o.UpdatedAt)).map(o => ({
         id: o.Citizen_ID,
         name: o.FullName,
@@ -114,7 +149,7 @@ export const DepartmentWorkReportsModal: React.FC<DepartmentWorkReportsModalProp
       }));
     }
 
-    if (department === 'interviews') {
+    if (effectiveDepartment === 'interviews') {
       return interviews.filter(i => isWithinDate(i.InterviewDate)).map(i => ({
         id: i.Interview_ID,
         name: i.FullName,
@@ -138,7 +173,7 @@ export const DepartmentWorkReportsModal: React.FC<DepartmentWorkReportsModalProp
       status: r.ProcessingStatus,
       notes: r.DeputyNotes || 'متابعة رسمية'
     }));
-  }, [department, citizens, organizationRecords, interviews, requests, dateRange, todayStr]);
+  }, [effectiveDepartment, citizens, organizationRecords, interviews, requests, dateRange, todayStr]);
 
   // Filtered items by search query
   const filteredItems = useMemo(() => {
@@ -189,7 +224,7 @@ export const DepartmentWorkReportsModal: React.FC<DepartmentWorkReportsModalProp
     organization: 'قسم التنظيم والموقف الجماهيري',
     interviews: 'قسم مقابلات النائب',
     admin: 'قسم الإدارة ومتابعة المعاملات الحكومية'
-  }[department];
+  }[effectiveDepartment];
 
   const periodArabicName = {
     today: `أعمال اليوم (${todayStr})`,
@@ -227,7 +262,7 @@ export const DepartmentWorkReportsModal: React.FC<DepartmentWorkReportsModalProp
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'تقرير الأعمال');
     
-    const fileName = `تقرير_${department}_${dateRange.start}_إلى_${dateRange.end}.xlsx`;
+    const fileName = `تقرير_${effectiveDepartment}_${dateRange.start}_إلى_${dateRange.end}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
     addAuditLog(
@@ -272,35 +307,64 @@ export const DepartmentWorkReportsModal: React.FC<DepartmentWorkReportsModalProp
           
           {/* Row 1: Department & Period Selectors */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Department */}
+            {/* Department Selector / RBAC Lock */}
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>القسم المعني بالتقرير:</span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                {[
-                  { id: 'reception', label: 'الاستعلامات' },
-                  { id: 'organization', label: 'التنظيم' },
-                  { id: 'interviews', label: 'المقابلات' },
-                  { id: 'admin', label: 'الإدارة' }
-                ].map(dept => (
-                  <button
-                    key={dept.id}
-                    onClick={() => {
-                      setDepartment(dept.id as any);
-                      setSelectedRecordIds(new Set());
-                    }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
-                      department === dept.id
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {dept.label}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                  <span>القسم المعني بالتقرير:</span>
+                </label>
+                {isSuperUser ? (
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    صلاحية شاملة (المطور / المدير)
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                    🔒 مقيد لقسمك فقط
+                  </span>
+                )}
               </div>
+
+              {isSuperUser ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {[
+                    { id: 'reception', label: 'الاستعلامات' },
+                    { id: 'organization', label: 'التنظيم' },
+                    { id: 'interviews', label: 'المقابلات' },
+                    { id: 'admin', label: 'الإدارة' }
+                  ].map(dept => (
+                    <button
+                      key={dept.id}
+                      onClick={() => {
+                        setDepartment(dept.id as any);
+                        setSelectedRecordIds(new Set());
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+                        effectiveDepartment === dept.id
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {dept.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-lg bg-blue-50/80 border border-blue-200/90 text-xs font-bold text-blue-950 flex flex-col sm:flex-row sm:items-center justify-between gap-1 shadow-2xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-500 font-normal">القسم المصرح لك بسحب تقاريره:</span>
+                    <span className="text-blue-700 font-black">
+                      {effectiveDepartment === 'reception' && 'قسم الاستعلامات والمراجعين'}
+                      {effectiveDepartment === 'admin' && 'قسم الإدارة والمعاملات الحكومية'}
+                      {effectiveDepartment === 'interviews' && 'قسم مقابلات النائب'}
+                      {effectiveDepartment === 'organization' && 'قسم التنظيم والموقف الجماهيري'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    (محجوب عن تقارير الأقسام الأخرى تلقائياً)
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Time Period */}

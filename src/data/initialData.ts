@@ -45,7 +45,12 @@ export const INITIAL_USERS: User[] = [
     Status: 'active',
     FullName: 'م. حيدر العراقي (مطور المنظومة)',
     Department: 'قسم تكنولوجيا المعلومات والبرمجة',
-    CreatedAt: '2026-01-01'
+    CreatedAt: '2026-01-01',
+    Permissions: [
+      'scan_upload', 'requests_create', 'requests_edit', 'requests_delete', 
+      'workflow_referral', 'citizens_register', 'print_cards', 'org_evaluation', 
+      'official_letters', 'export_reports', 'view_archive'
+    ]
   },
   {
     User_ID: 'USR-002',
@@ -56,19 +61,74 @@ export const INITIAL_USERS: User[] = [
     Status: 'active',
     FullName: 'أ. صادق عبد الحسن الناشي',
     Department: 'إدارة مكتب النائب',
-    CreatedAt: '2026-01-05'
+    CreatedAt: '2026-01-05',
+    Permissions: [
+      'scan_upload', 'requests_create', 'requests_edit', 'requests_delete', 
+      'workflow_referral', 'citizens_register', 'print_cards', 'org_evaluation', 
+      'official_letters', 'export_reports', 'view_archive'
+    ]
   },
+  // --- قسم الإدارة والمعاملات (4 موظفين) ---
   {
     User_ID: 'USR-003',
     Username: 'admin',
     Password: '123',
     Role: 'admin',
-    RoleArabic: 'مسؤول قسم الإدارة والمعاملات',
+    RoleArabic: 'مدير قسم الإدارة والمعاملات',
     Status: 'active',
     FullName: 'أ. أحمد حامد السعدون',
     Department: 'قسم الإدارة والمتابعة الحكومية',
-    CreatedAt: '2026-01-10'
+    CreatedAt: '2026-01-10',
+    Permissions: [
+      'scan_upload', 'requests_create', 'requests_edit', 'requests_delete', 
+      'workflow_referral', 'print_cards', 'export_reports', 'view_archive'
+    ]
   },
+  {
+    User_ID: 'USR-009',
+    Username: 'fadhil',
+    Password: '123',
+    Role: 'admin',
+    RoleArabic: 'معاون إداري ومتابعة معاملات',
+    Status: 'active',
+    FullName: 'فاضل هادي معيوف',
+    Department: 'قسم الإدارة والمتابعة الحكومية',
+    CreatedAt: '2026-01-11',
+    Permissions: [
+      'scan_upload', 'requests_create', 'requests_edit', 
+      'workflow_referral', 'view_archive'
+    ]
+  },
+  {
+    User_ID: 'USR-010',
+    Username: 'sara.admin',
+    Password: '123',
+    Role: 'admin',
+    RoleArabic: 'مسؤولة تدقيق ومتابعة الكتب',
+    Status: 'active',
+    FullName: 'سارة علي الهاشمي',
+    Department: 'قسم الإدارة والمتابعة الحكومية',
+    CreatedAt: '2026-01-14',
+    Permissions: [
+      'scan_upload', 'requests_create', 'requests_edit', 
+      'workflow_referral', 'export_reports', 'view_archive'
+    ]
+  },
+  {
+    User_ID: 'USR-011',
+    Username: 'karrar.admin',
+    Password: '123',
+    Role: 'admin',
+    RoleArabic: 'موظف أرشفة ومسح ضوئي (سكانر)',
+    Status: 'active',
+    FullName: 'كرار كاظم العتابي',
+    Department: 'قسم الإدارة والمتابعة الحكومية',
+    CreatedAt: '2026-01-15',
+    Permissions: [
+      'scan_upload', 'requests_create', 'requests_edit', 'view_archive'
+    ]
+  },
+  // --- قسم الاستعلامات والمراجعين (3 موظفين) ---
   {
     User_ID: 'USR-004',
     Username: 'reception',
@@ -78,8 +138,40 @@ export const INITIAL_USERS: User[] = [
     Status: 'active',
     FullName: 'م. كرار جبار الخفاجي',
     Department: 'قسم الاستعلامات والمراجعين',
-    CreatedAt: '2026-01-12'
+    CreatedAt: '2026-01-12',
+    Permissions: [
+      'scan_upload', 'citizens_register', 'print_cards', 'requests_create', 'view_archive'
+    ]
   },
+  {
+    User_ID: 'USR-012',
+    Username: 'ali.reception',
+    Password: '123',
+    Role: 'reception',
+    RoleArabic: 'موظف استعلامات ومقابلة أولية',
+    Status: 'active',
+    FullName: 'علي حسين البدري',
+    Department: 'قسم الاستعلامات والمراجعين',
+    CreatedAt: '2026-01-16',
+    Permissions: [
+      'scan_upload', 'citizens_register', 'print_cards', 'view_archive'
+    ]
+  },
+  {
+    User_ID: 'USR-013',
+    Username: 'haider.reception',
+    Password: '123',
+    Role: 'reception',
+    RoleArabic: 'موظف إدخال بيانات واستقبال',
+    Status: 'active',
+    FullName: 'حيدر رحيم الشمري',
+    Department: 'قسم الاستعلامات والمراجعين',
+    CreatedAt: '2026-01-18',
+    Permissions: [
+      'scan_upload', 'citizens_register', 'print_cards', 'view_archive'
+    ]
+  },
+  // --- النائب ---
   {
     User_ID: 'USR-005',
     Username: 'deputy',
@@ -89,19 +181,42 @@ export const INITIAL_USERS: User[] = [
     Status: 'active',
     FullName: 'النائب المهندسة علا عودة الناشي',
     Department: 'المكتب البرلماني المستقل',
-    CreatedAt: '2026-01-01'
+    CreatedAt: '2026-01-01',
+    Permissions: [
+      'scan_upload', 'requests_create', 'requests_edit', 'workflow_referral', 
+      'org_evaluation', 'official_letters', 'export_reports', 'view_archive'
+    ]
   },
+  // --- قسم التنظيم والجماهير (2 موظفين) ---
   {
     User_ID: 'USR-006',
     Username: 'organization',
     Password: '123',
     Role: 'organization',
-    RoleArabic: 'مسؤول قسم التنظيم والجمهور',
+    RoleArabic: 'مسؤول قسم العلاقات والتنظيم',
     Status: 'active',
     FullName: 'أ. حسين علي الموسوي',
     Department: 'قسم العلاقات والتنظيم',
-    CreatedAt: '2026-01-15'
+    CreatedAt: '2026-01-15',
+    Permissions: [
+      'scan_upload', 'org_evaluation', 'export_reports', 'workflow_referral', 'view_archive'
+    ]
   },
+  {
+    User_ID: 'USR-014',
+    Username: 'murtadha.org',
+    Password: '123',
+    Role: 'organization',
+    RoleArabic: 'منسق شؤون المفاتيح والتنظيم',
+    Status: 'active',
+    FullName: 'مرتضى جبار الناشي',
+    Department: 'قسم العلاقات والتنظيم',
+    CreatedAt: '2026-01-20',
+    Permissions: [
+      'scan_upload', 'org_evaluation', 'view_archive'
+    ]
+  },
+  // --- قسم الرقابة والتشريع (2 موظفين) ---
   {
     User_ID: 'USR-007',
     Username: 'audit',
@@ -111,8 +226,26 @@ export const INITIAL_USERS: User[] = [
     Status: 'active',
     FullName: 'الحقوقي مصطفى ثامر الزيدي',
     Department: 'قسم الرقابة والتدقيق القانوني',
-    CreatedAt: '2026-01-18'
+    CreatedAt: '2026-01-18',
+    Permissions: [
+      'requests_edit', 'workflow_referral', 'export_reports', 'view_archive'
+    ]
   },
+  {
+    User_ID: 'USR-016',
+    Username: 'zainab.audit',
+    Password: '123',
+    Role: 'audit',
+    RoleArabic: 'باحثة ومدققة قانونية',
+    Status: 'active',
+    FullName: 'الحقوقية زينب حسن المالكي',
+    Department: 'قسم الرقابة والتدقيق القانوني',
+    CreatedAt: '2026-01-22',
+    Permissions: [
+      'requests_edit', 'view_archive'
+    ]
+  },
+  // --- قسم مكنة المكتب والطباعة (2 موظفين) ---
   {
     User_ID: 'USR-008',
     Username: 'machine',
@@ -122,18 +255,24 @@ export const INITIAL_USERS: User[] = [
     Status: 'active',
     FullName: 'م. سجاد كاظم البدري',
     Department: 'قسم مكنة وطباعة الكتب والمخاطبات',
-    CreatedAt: '2026-01-20'
+    CreatedAt: '2026-01-20',
+    Permissions: [
+      'scan_upload', 'official_letters', 'print_cards', 'view_archive'
+    ]
   },
   {
-    User_ID: 'USR-009',
-    Username: 'فاضل هادي معيوف',
+    User_ID: 'USR-015',
+    Username: 'haider.machine',
     Password: '123',
-    Role: 'admin',
-    RoleArabic: 'موظف قسم الإدارة والمعاملات',
+    Role: 'machine',
+    RoleArabic: 'موظف تنسيق وطباعة مخاطبات',
     Status: 'active',
-    FullName: 'فاضل هادي معيوف',
-    Department: 'قسم الإدارة والمتابعة الحكومية',
-    CreatedAt: new Date().toISOString().split('T')[0]
+    FullName: 'حيدر عبد الله الخفاجي',
+    Department: 'قسم مكنة وطباعة الكتب والمخاطبات',
+    CreatedAt: '2026-01-25',
+    Permissions: [
+      'scan_upload', 'official_letters', 'print_cards', 'view_archive'
+    ]
   }
 ];
 

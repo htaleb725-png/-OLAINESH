@@ -180,10 +180,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // Merge saved users by User_ID
+      // Merge saved users by User_ID with permissions
       for (const u of parsed) {
         if (u && u.User_ID) {
-          userMap.set(u.User_ID, u);
+          const existing = userMap.get(u.User_ID);
+          userMap.set(u.User_ID, {
+            ...existing,
+            ...u,
+            Permissions: (u.Permissions && u.Permissions.length > 0) ? u.Permissions : (existing?.Permissions || ['scan_upload', 'requests_create', 'view_archive'])
+          });
         }
       }
 

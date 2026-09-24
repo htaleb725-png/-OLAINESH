@@ -38,12 +38,16 @@ export const DirectScannerPrinter: React.FC<DirectScannerPrinterProps> = ({
     addDocument, 
     systemSettings, 
     forwardCitizenWorkflow,
-    setSelectedCitizenForHistory
+    setSelectedCitizenForHistory,
+    requests,
+    updateRequest
   } = useApp();
 
   const [selectedCitizenId, setSelectedCitizenId] = useState<string>(
     initialCitizenId || (citizens[0]?.Citizen_ID || '')
   );
+  const [selectedRequestId, setSelectedRequestId] = useState<string>('');
+  const [requestSavedSuccess, setRequestSavedSuccess] = useState<string | null>(null);
   const [docCategory, setDocCategory] = useState<string>('بطاقة وطنية ومستمسكات');
   const [docTitle, setDocTitle] = useState<string>('مسح ضوئي للمستمسكات الرسمية');
   const [notes, setNotes] = useState<string>('');
@@ -241,6 +245,46 @@ export const DirectScannerPrinter: React.FC<DirectScannerPrinterProps> = ({
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
+  // Save scan image to citizen's office request (الطلب) with employee name & timestamp
+  const handleSaveToRequest = () => {
+    if (!scannedImage) {
+      alert('لا توجد صورة ممسوحة ضوئياً لحفظها.');
+      return;
+    }
+    const citReqs = requests.filter(r => r.Citizen_ID === selectedCitizenId);
+    const targetReqId = selectedRequestId || citReqs[0]?.Request_ID;
+    if (!targetReqId) {
+      alert('لم يتم العثور على طلب/معاملة مسجلة لهذا المراجع. يرجى إنشاء طلب للمراجع أولاً.');
+      return;
+    }
+    const targetReq = requests.find(r => r.Request_ID === targetReqId);
+    if (!targetReq) return;
+
+    const uploaderName = currentUser?.FullName || 'موظف الإدارة';
+    const nowStamp = new Date().toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' });
+
+    updateRequest({
+      ...targetReq,
+      AttachedRequestImage: scannedImage,
+      ScanUploadedBy: uploaderName,
+      ScanUploadedAt: nowStamp,
+      ScanAttachments: [
+        ...(targetReq.ScanAttachments || []),
+        {
+          id: `SCAN-${Date.now()}`,
+          url: scannedImage,
+          fileName: docTitle || 'مسح ضوئي للطلب',
+          uploadedBy: uploaderName,
+          uploadedAt: nowStamp,
+          notes: notes || undefined
+        }
+      ]
+    });
+
+    setRequestSavedSuccess(`تم حفظ صورة الاسكنر كما هي في المعاملة (${targetReq.Request_ID}) بنجاح. القائم بالمسح: ${uploaderName} | التاريخ: ${nowStamp}`);
+    setTimeout(() => setRequestSavedSuccess(null), 6000);
+  };
+
   // Print & Forward to Organization Director in 1 step
   const handlePrintAndForwardToOrg = () => {
     handleSaveToArchive();
@@ -297,6 +341,16 @@ export const DirectScannerPrinter: React.FC<DirectScannerPrinterProps> = ({
         <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 font-bold animate-fadeIn">
           <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>تم حفظ المستند الممسوح ضوئياً بنجاح في الأرشيف السحابي للمراجع ({selectedCitizen?.FullName}).</span>
+        </div>
+      )}
+
+      {requestSavedSuccess && (
+        <div className="p-3.5 bg-blue-50 border border-blue-300 text-blue-900 rounded-xl text-xs flex items-center gap-2.5 font-bold animate-fadeIn shadow-xs">
+          <CheckCircle className="w-5 h-5 text-blue-600 shrink-0" />
+          <div className="space-y-0.5">
+            <div>{requestSavedSuccess}</div>
+            <div className="text-[11px] text-blue-700 font-medium">✓ تم حفظ صورة الاسكنر الأصلية كما هي تماماً وتوثيق الموظف القائم بالرفع والتاريخ بدقة.</div>
+          </div>
         </div>
       )}
 
@@ -382,6 +436,68 @@ export const DirectScannerPrinter: React.FC<DirectScannerPrinterProps> = ({
                 />
               </div>
             </div>
+          </div>
+
+          {/* Direct Request Linking Card (ربط بالطلب وحفظ صورة الاسكنر مع توثيق اسم الموظف والتاريخ) */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-blue-200/60 pb-2">
+              <span className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-blue-700" />
+                <span>إرفاق بالمعاملة / الطلب (حفظ صورة الاسكنر)</span>
+              </span>
+              <span className="text-[10px] bg-blue-200/70 text-blue-900 font-bold px-2 py-0.5 rounded-full">
+                توثيق اسم الموظف والتاريخ
+              </span>
+            </div>
+
+            {requests.filter(r => r.Citizen_ID === selectedCitizenId).length === 0 ? (
+              <div className="p-3 bg-white rounded-lg border border-blue-150 text-[11px] text-slate-500 text-center">
+                لا توجد طلبات مسجلة لهذا المراجع حالياً. يمكنك إنشاء طلب من قسم الإدارة أولاً أو الحفظ في الأرشيف السحابي.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    اختر الطلب المراد إرفاق صورة الاسكنر به:
+                  </label>
+                  <select
+                    value={selectedRequestId || requests.filter(r => r.Citizen_ID === selectedCitizenId)[0]?.Request_ID}
+                    onChange={(e) => setSelectedRequestId(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-blue-200 text-xs font-bold text-blue-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    {requests.filter(r => r.Citizen_ID === selectedCitizenId).map(r => (
+                      <option key={r.Request_ID} value={r.Request_ID}>
+                        [{r.Request_ID}] - {r.Entity} ({r.Details.slice(0, 35)}...)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-2.5 bg-white/90 rounded-lg border border-blue-100 text-[11px] space-y-1 text-slate-600">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">الموظف القائم بالرفع:</span>
+                    <strong className="text-blue-900 font-bold">{currentUser?.FullName || 'موظف الإدارة'}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">تاريخ ووقت الإرفاق:</span>
+                    <span className="font-mono text-slate-700 font-bold">{new Date().toLocaleString('ar-IQ', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  </div>
+                  <div className="text-[10px] text-emerald-700 font-semibold pt-1 border-t border-slate-100 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-emerald-600" />
+                    <span>تُحفظ صورة الاسكنر الأصلية كما هي تماماً مع حفظ اسم الموظف والتاريخ.</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSaveToRequest}
+                  className="w-full py-2 px-3 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                >
+                  <Save className="w-3.5 h-3.5 text-blue-200" />
+                  <span>حفظ وإرفاق صورة الاسكنر بالطلب المختار</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Scanner Source Selector */}

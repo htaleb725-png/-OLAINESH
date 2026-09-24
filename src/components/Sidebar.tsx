@@ -51,9 +51,10 @@ export const Sidebar: React.FC = () => {
   const mainNavItems = [
     {
       id: 'dashboard',
-      label: 'الرئيسية (لوحة التحكم)',
+      label: 'الرئيسية (لوحة المطور والمدير الشاملة)',
       icon: LayoutDashboard,
-      badge: null,
+      badge: 'الإدارة العليا',
+      badgeColor: 'bg-blue-500/30 text-blue-200 border-blue-500/40',
       hoverBg: 'hover:bg-blue-950/50 hover:border-blue-500/40 hover:text-blue-100 hover:shadow-lg hover:shadow-blue-950/50',
       hoverIcon: 'group-hover:text-blue-400 group-hover:drop-shadow-[0_0_10px_rgba(96,165,250,0.9)]',
       glowColor: 'bg-blue-500',
@@ -232,24 +233,24 @@ export const Sidebar: React.FC = () => {
     switch (role) {
       case 'reception':
       case 'reception_officer':
-        return ['dashboard', 'reception', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
+        return ['reception', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
       case 'admin':
       case 'admin_officer':
-        return ['dashboard', 'admin', 'drive_requests', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
+        return ['admin', 'drive_requests', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
       case 'interviews_officer':
-        return ['dashboard', 'interviews', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
+        return ['interviews', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
       case 'organization':
       case 'organization_officer':
-        return ['dashboard', 'organization', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
+        return ['organization', 'search_archive', 'reports', 'whatsapp'].includes(sectionId);
       case 'machine':
       case 'machine_officer':
-        return ['dashboard', 'machine', 'search_archive', 'reports'].includes(sectionId);
+        return ['machine', 'search_archive', 'reports'].includes(sectionId);
       case 'audit':
-        return ['dashboard', 'audit', 'search_archive', 'reports'].includes(sectionId);
+        return ['audit', 'search_archive', 'reports'].includes(sectionId);
       case 'archive':
-        return ['dashboard', 'search_archive', 'reports'].includes(sectionId);
+        return ['search_archive', 'reports'].includes(sectionId);
       default:
-        return ['dashboard', 'search_archive', 'reports'].includes(sectionId);
+        return ['search_archive', 'reports'].includes(sectionId);
     }
   };
 

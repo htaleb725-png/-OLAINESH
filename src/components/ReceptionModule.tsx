@@ -13,7 +13,10 @@ import {
   Sparkles,
   Edit,
   Save,
-  X
+  X,
+  Users,
+  LogIn,
+  ShieldCheck
 } from 'lucide-react';
 import { AiRequestDrafterModal } from './AiRequestDrafterModal';
 import { DepartmentWorkReportsModal } from './DepartmentWorkReportsModal';
@@ -28,7 +31,10 @@ export const ReceptionModule: React.FC = () => {
     setPrintableBadgeCitizen, 
     currentUser,
     setSelectedCitizenForHistory,
-    addRequest
+    addRequest,
+    users,
+    switchUser,
+    setActiveSection
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,6 +45,7 @@ export const ReceptionModule: React.FC = () => {
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showWorkReportsModal, setShowWorkReportsModal] = useState(false);
+  const [showStaffPanel, setShowStaffPanel] = useState(false);
 
   // Edit citizen state
   const [editingCitizen, setEditingCitizen] = useState<Citizen | null>(null);
@@ -301,6 +308,17 @@ export const ReceptionModule: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setShowStaffPanel(!showStaffPanel)}
+            className={`px-3.5 py-2 rounded-lg text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+              showStaffPanel ? 'bg-amber-600 ring-2 ring-amber-300' : 'bg-slate-800 hover:bg-slate-700'
+            }`}
+            title="عرض كادر موظفي الاستعلامات وتبديل الموظف النشط"
+          >
+            <Users className="w-4 h-4 text-amber-300" />
+            <span>كادر الاستعلامات ({users.filter(u => u.Role === 'reception' || u.Department?.includes('الاستعلامات')).length} موظفين)</span>
+          </button>
+
+          <button
             onClick={() => {
               resetForm();
               setShowAddModal(true);
@@ -312,6 +330,84 @@ export const ReceptionModule: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Staff Panel for Reception */}
+      {showStaffPanel && (
+        <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-700 shadow-md space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-amber-400" />
+              <h4 className="text-xs font-bold text-white">
+                كادر موظفي قسم الاستعلامات والاستقبال والصلاحيات الممنوحة
+              </h4>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveSection('master_admin')}
+                className="text-[11px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>إدارة الصلاحيات الشاملة</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowStaffPanel(false)}
+                className="text-slate-400 hover:text-white text-xs font-bold px-1.5"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {users
+              .filter(u => u.Role === 'reception' || u.Department?.includes('الاستعلامات'))
+              .map((st, idx) => {
+                const isCurrent = currentUser?.User_ID === st.User_ID;
+                const perms = st.Permissions || [];
+                return (
+                  <div
+                    key={st.User_ID || idx}
+                    className={`p-3 rounded-xl border text-right transition-all space-y-2 ${
+                      isCurrent
+                        ? 'bg-blue-950/80 border-blue-400 ring-1 ring-blue-400/40'
+                        : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-xs text-white">{st.FullName}</div>
+                      {isCurrent ? (
+                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-600 text-white">
+                          النشط الآن
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => switchUser(st)}
+                          className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <LogIn className="w-3 h-3" />
+                          <span>تفعيل</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-300 font-mono">
+                      اسم الدخول: {st.Username} • {st.RoleArabic}
+                    </div>
+                    <div className="pt-1.5 border-t border-slate-700/60 flex flex-wrap gap-1">
+                      {perms.map(p => (
+                        <span key={p} className="text-[9px] px-1.5 py-0.2 rounded bg-slate-900/90 text-slate-300 border border-slate-700">
+                          ✓ {p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* Success Banner */}
       {successMessage && (

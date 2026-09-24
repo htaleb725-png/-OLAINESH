@@ -21,14 +21,79 @@ import {
 export const ReportsModule: React.FC = () => {
   const { citizens, requests, interviews, organizationRecords, addAuditLog, currentUser } = useApp();
 
+  // Role and Department Isolation: Developer & Director can access all reports; others can only access their department's reports
+  const isSuperUser = ['developer', 'director', 'deputy'].includes(currentUser?.Role || '');
+  const userRole = currentUser?.Role || '';
+  const userDept = currentUser?.Department || '';
+
+  const isReception = userRole === 'reception' || userRole === 'reception_officer' || userDept.includes('الاستعلامات');
+  const isAdmin = userRole === 'admin' || userRole === 'admin_officer' || userDept.includes('الإدارة');
+  const isInterviews = userRole === 'interviews_officer' || userDept.includes('المقابلات');
+  const isOrganization = userRole === 'organization' || userRole === 'organization_officer' || userDept.includes('التنظيم');
+
+  const departmentDisplayName = useMemo(() => {
+    if (isSuperUser) return 'الإدارة العليا والمطور (شامل لكافة الأقسام)';
+    if (isReception) return 'قسم الاستعلامات وشؤون المراجعين';
+    if (isAdmin) return 'قسم الإدارة ومتابعة المعاملات الحكومية';
+    if (isInterviews) return 'قسم مقابلات النائب';
+    if (isOrganization) return 'قسم التنظيم والموقف الجماهيري';
+    return 'قسم المكتب المعتمد';
+  }, [isSuperUser, isReception, isAdmin, isInterviews, isOrganization]);
+
+  // Compute available report tabs strictly by department
+  const availableTabs = useMemo(() => {
+    if (isSuperUser) {
+      return [
+        { id: 'requests' as const, label: `تقرير المعاملات الإدارية (${requests.length})`, icon: FolderKanban, deptName: 'قسم الإدارة والمعاملات' },
+        { id: 'citizens' as const, label: `سجل المراجعين المركزي (${citizens.length})`, icon: Users, deptName: 'قسم الاستعلامات والمراجعين' },
+        { id: 'interviews' as const, label: `تقرير مقابلات النائب (${interviews.length})`, icon: Handshake, deptName: 'قسم مقابلات النائب' },
+        { id: 'organization' as const, label: `تقرير الموقف التنظيمي (${organizationRecords.length})`, icon: UserCheck, deptName: 'قسم التنظيم والجماهير' }
+      ];
+    }
+    if (isReception) {
+      return [
+        { id: 'citizens' as const, label: `سجل وتقارير مراجعي قسم الاستعلامات (${citizens.length})`, icon: Users, deptName: 'قسم الاستعلامات والمراجعين' }
+      ];
+    }
+    if (isAdmin) {
+      return [
+        { id: 'requests' as const, label: `تقرير المعاملات والكتب الإدارية (${requests.length})`, icon: FolderKanban, deptName: 'قسم الإدارة والمعاملات' }
+      ];
+    }
+    if (isInterviews) {
+      return [
+        { id: 'interviews' as const, label: `تقرير سجل مقابلات النائب (${interviews.length})`, icon: Handshake, deptName: 'قسم مقابلات النائب' }
+      ];
+    }
+    if (isOrganization) {
+      return [
+        { id: 'organization' as const, label: `تقرير الموقف التنظيمي والاستبيانات (${organizationRecords.length})`, icon: UserCheck, deptName: 'قسم التنظيم والجماهير' }
+      ];
+    }
+    return [
+      { id: 'citizens' as const, label: `سجل المراجعين (${citizens.length})`, icon: Users, deptName: 'قسم الاستعلامات' }
+    ];
+  }, [isSuperUser, isReception, isAdmin, isInterviews, isOrganization, requests.length, citizens.length, interviews.length, organizationRecords.length]);
+
   // RBAC for Bulk operations: strictly Admin / Director / Developer
   const canAccessBulkOperations = ['developer', 'director', 'admin', 'admin_officer'].includes(currentUser?.Role || '');
 
   const [activeModuleTab, setActiveModuleTab] = useState<'reports' | 'bulk'>('reports');
-  const [reportType, setReportType] = useState<'requests' | 'citizens' | 'interviews' | 'organization'>('requests');
+  const [reportType, setReportType] = useState<'requests' | 'citizens' | 'interviews' | 'organization'>(
+    isReception ? 'citizens' : isAdmin ? 'requests' : isInterviews ? 'interviews' : isOrganization ? 'organization' : 'requests'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
+
+  // Synchronize reportType with authorized availableTabs
+  React.useEffect(() => {
+    if (availableTabs.length > 0 && !availableTabs.some(t => t.id === reportType)) {
+      setReportType(availableTabs[0].id);
+      setStatusFilter('all');
+      setSearchQuery('');
+    }
+  }, [availableTabs, reportType]);
 
   // Compute breakdown by entity
   const entityCounts: { [entity: string]: number } = {};
@@ -280,15 +345,39 @@ export const ReportsModule: React.FC = () => {
             </div>
           </div>
 
+          {/* Department RBAC Access & Protection Banner */}
+          {isSuperUser ? (
+            <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-3 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="font-bold text-xs text-white">نطاق التقارير: {departmentDisplayName}</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  صلاحية كاملة للإدارة العليا
+                </span>
+              </div>
+              <span className="text-[11px] text-blue-200">
+                بإمكانك استعراض وسحب وتصدير كافة تقارير أقسام المكتب (الإدارة، الاستعلامات، المقابلات، والتنظيم).
+              </span>
+            </div>
+          ) : (
+            <div className="bg-amber-50/90 text-amber-950 p-3 rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span className="font-bold text-xs text-amber-900">🔒 تقارير مقيدة ومخصصة لـ: {departmentDisplayName}</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200/60 text-amber-900 border border-amber-300">
+                  قسمك المعتمد فقط
+                </span>
+              </div>
+              <span className="text-[11px] text-amber-800 font-medium">
+                تم قفل إمكانية سحب وتصدير تقارير الأقسام الأخرى تلقائياً لضمان الخصوصية وسرية المعاملات.
+              </span>
+            </div>
+          )}
+
           {/* Report Selection Tabs */}
           <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
             <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: 'requests', label: `تقرير المعاملات الإدارية (${requests.length})`, icon: FolderKanban },
-                { id: 'citizens', label: `سجل المراجعين المركزي (${citizens.length})`, icon: Users },
-                { id: 'interviews', label: `تقرير مقابلات النائب (${interviews.length})`, icon: Handshake },
-                { id: 'organization', label: `تقرير الموقف التنظيمي (${organizationRecords.length})`, icon: UserCheck }
-              ].map((tab) => {
+              {availableTabs.map((tab) => {
                 const IconComponent = tab.icon;
                 return (
                   <button
@@ -595,76 +684,160 @@ export const ReportsModule: React.FC = () => {
             </div>
           )}
 
-          {/* Visual Analytics Cards */}
+          {/* Department-Aware Visual Analytics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            {/* Entity Distribution */}
-            <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <h4 className="font-bold text-xs text-slate-800 border-r-2 border-blue-600 pr-2">
-                توزيع المعاملات حسب الوزارات والجهات
-              </h4>
-              <div className="space-y-2">
-                {Object.entries(entityCounts).slice(0, 5).map(([entity, count]) => {
-                  const pct = Math.round((count / requests.length) * 100) || 0;
-                  return (
-                    <div key={entity} className="space-y-1">
-                      <div className="flex justify-between text-xs text-slate-700">
-                        <span className="truncate max-w-[180px]">{entity}</span>
-                        <span className="font-mono font-bold text-blue-600">{count} ({pct}%)</span>
+            {/* 1. Entity Distribution (Admin & Super Users) */}
+            {(isSuperUser || isAdmin) && (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                <h4 className="font-bold text-xs text-slate-800 border-r-2 border-blue-600 pr-2">
+                  توزيع المعاملات حسب الوزارات والجهات ({requests.length} معاملة)
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(entityCounts).slice(0, 5).map(([entity, count]) => {
+                    const pct = Math.round((count / (requests.length || 1)) * 100) || 0;
+                    return (
+                      <div key={entity} className="space-y-1">
+                        <div className="flex justify-between text-xs text-slate-700">
+                          <span className="truncate max-w-[180px]">{entity}</span>
+                          <span className="font-mono font-bold text-blue-600">{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-blue-600 h-full rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-blue-600 h-full rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* District Distribution */}
-            <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <h4 className="font-bold text-xs text-slate-800 border-r-2 border-amber-500 pr-2">
-                التوزيع الجغرافي للمراجعين بأقضية ذي قار
-              </h4>
-              <div className="space-y-2">
-                {Object.entries(districtCounts).slice(0, 5).map(([district, count]) => {
-                  const pct = Math.round((count / citizens.length) * 100) || 0;
-                  return (
-                    <div key={district} className="space-y-1">
-                      <div className="flex justify-between text-xs text-slate-700">
-                        <span>{district}</span>
-                        <span className="font-mono font-bold text-amber-600">{count} ({pct}%)</span>
+            {/* 2. District Distribution (Reception & Super Users) */}
+            {(isSuperUser || isReception) && (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                <h4 className="font-bold text-xs text-slate-800 border-r-2 border-amber-500 pr-2">
+                  التوزيع الجغرافي لمراجعي الاستعلامات بأقضية ذي قار ({citizens.length} مراجع)
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(districtCounts).slice(0, 5).map(([district, count]) => {
+                    const pct = Math.round((count / (citizens.length || 1)) * 100) || 0;
+                    return (
+                      <div key={district} className="space-y-1">
+                        <div className="flex justify-between text-xs text-slate-700">
+                          <span>{district}</span>
+                          <span className="font-mono font-bold text-amber-600">{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-amber-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-amber-500 h-full rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Processing Status Breakdown */}
-            <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
-              <h4 className="font-bold text-xs text-slate-800 border-r-2 border-emerald-500 pr-2">
-                مؤشرات الإنجاز والمسار الإداري
-              </h4>
-              <div className="space-y-2">
-                {Object.entries(statusCounts).map(([status, count]) => {
-                  const pct = Math.round((count / requests.length) * 100) || 0;
-                  return (
-                    <div key={status} className="space-y-1">
-                      <div className="flex justify-between text-xs text-slate-700">
-                        <span>{status}</span>
-                        <span className="font-mono font-bold text-emerald-600">{count} ({pct}%)</span>
+            {/* 3. Processing Status Breakdown (Admin & Super Users) */}
+            {(isSuperUser || isAdmin) && (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                <h4 className="font-bold text-xs text-slate-800 border-r-2 border-emerald-500 pr-2">
+                  مؤشرات الإنجاز والمسار الإداري
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(statusCounts).map(([status, count]) => {
+                    const pct = Math.round((count / (requests.length || 1)) * 100) || 0;
+                    return (
+                      <div key={status} className="space-y-1">
+                        <div className="flex justify-between text-xs text-slate-700">
+                          <span>{status}</span>
+                          <span className="font-mono font-bold text-emerald-600">{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* 4. Reception Visitors Rating Breakdown (Reception Only) */}
+            {isReception && !isSuperUser && (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                <h4 className="font-bold text-xs text-slate-800 border-r-2 border-cyan-500 pr-2">
+                  تقييمات مراجعي الاستعلامات
+                </h4>
+                <div className="space-y-2">
+                  {['لائق جداً', 'لائق', 'عادي', 'يحتاج متابعة'].map(rating => {
+                    const count = citizens.filter(c => c.Rating === rating).length;
+                    const pct = Math.round((count / (citizens.length || 1)) * 100) || 0;
+                    return (
+                      <div key={rating} className="space-y-1">
+                        <div className="flex justify-between text-xs text-slate-700">
+                          <span>{rating}</span>
+                          <span className="font-mono font-bold text-cyan-600">{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-cyan-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 5. Interviews Breakdown (Interviews) */}
+            {(isInterviews) && (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                <h4 className="font-bold text-xs text-slate-800 border-r-2 border-purple-500 pr-2">
+                  موقف مقابلات النائب ({interviews.length} مقابلة)
+                </h4>
+                <div className="space-y-2">
+                  {['تمت المقابلة', 'مجدولة', 'ملغاة', 'مؤجلة'].map(st => {
+                    const count = interviews.filter(i => i.Status === st).length;
+                    const pct = Math.round((count / (interviews.length || 1)) * 100) || 0;
+                    return (
+                      <div key={st} className="space-y-1">
+                        <div className="flex justify-between text-xs text-slate-700">
+                          <span>{st}</span>
+                          <span className="font-mono font-bold text-purple-600">{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-purple-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 6. Organization Breakdown (Organization) */}
+            {(isOrganization) && (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3 shadow-xs">
+                <h4 className="font-bold text-xs text-slate-800 border-r-2 border-indigo-500 pr-2">
+                  الموقف التنظيمي والانتخابي ({organizationRecords.length} قيد)
+                </h4>
+                <div className="space-y-2">
+                  {['مؤيد قوي', 'مؤيد', 'محايد', 'غير محدد'].map(st => {
+                    const count = organizationRecords.filter(o => o.OrgRating === st).length;
+                    const pct = Math.round((count / (organizationRecords.length || 1)) * 100) || 0;
+                    return (
+                      <div key={st} className="space-y-1">
+                        <div className="flex justify-between text-xs text-slate-700">
+                          <span>{st}</span>
+                          <span className="font-mono font-bold text-indigo-600">{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -673,7 +846,12 @@ export const ReportsModule: React.FC = () => {
       <DepartmentWorkReportsModal
         isOpen={isReportsModalOpen}
         onClose={() => setIsReportsModalOpen(false)}
-        defaultDepartment="reception"
+        defaultDepartment={
+          isReception ? 'reception' :
+          isAdmin ? 'admin' :
+          isInterviews ? 'interviews' :
+          isOrganization ? 'organization' : 'reception'
+        }
       />
 
     </div>
