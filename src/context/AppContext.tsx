@@ -34,6 +34,7 @@ import {
 } from '../data/initialData';
 import { findBestArabicMatch } from '../utils/arabicNameMatcher';
 import { clearAllImagesFromDB } from '../utils/imageDb';
+import { pushToGoogleSheetsRealtime } from '../services/realtimeGoogleSync';
 
 export interface UrgentNotification {
   id: string;
@@ -670,6 +671,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const triggerDepartmentGreeting = (user: User, departmentName?: string) => {
+    // Only display the welcome greeting once per session when entering the department
+    try {
+      const sessionKey = `greeting_shown_${user.User_ID}`;
+      if (sessionStorage.getItem(sessionKey)) {
+        return;
+      }
+      sessionStorage.setItem(sessionKey, 'true');
+    } catch {
+      // ignore storage errors
+    }
+
     const hour = new Date().getHours();
     const timeWord = (hour >= 4 && hour < 12) ? 'صباح الخير' : 'مساء الخير';
     const cleanName = user.FullName.replace(/^(المهندس|المهندسة|أ\.|م\.|د\.|الحقوقي)\s*/i, '').trim();
@@ -839,6 +851,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setNotifications(prev => [receptionNotif, ...prev]);
 
+    // Realtime silent push to Google Sheets & Drive
+    pushToGoogleSheetsRealtime('citizens', newCitizen, 'insert', systemSettings.appsScriptUrl);
+
     return newCitizen;
   };
 
@@ -860,6 +875,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setCitizens(prev => prev.map(c => c.Citizen_ID === citizen.Citizen_ID ? updatedCitizen : c));
     addAuditLog('تحديث بيانات مواطن', 'الاستعلامات', `تعديل السجل التعريفي للمواطن ${fullName} (${citizen.Citizen_ID})`);
+    // Realtime silent push to Google Sheets
+    pushToGoogleSheetsRealtime('citizens', updatedCitizen, 'update', systemSettings.appsScriptUrl);
   };
 
   const deleteCitizen = (citizenId: string) => {
@@ -950,12 +967,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setNotifications(prev => [urgentNotif, ...prev]);
     }
 
+    // Realtime silent push to Google Sheets
+    pushToGoogleSheetsRealtime('requests', newRequest, 'insert', systemSettings.appsScriptUrl);
+
     return newRequest;
   };
 
   const updateRequest = (req: OfficeRequest) => {
     setRequests(prev => prev.map(r => r.Request_ID === req.Request_ID ? req : r));
     addAuditLog('تحديث طلب إداري', 'قسم الإدارة', `تم تعديل حالة أو مسار الطلب ${req.Request_ID} إلى (${req.ProcessingStatus})`);
+    // Realtime silent push to Google Sheets
+    pushToGoogleSheetsRealtime('requests', req, 'update', systemSettings.appsScriptUrl);
   };
 
   const deleteRequest = (requestId: string) => {
@@ -1068,12 +1090,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setNotifications(prev => [urgentNotif, ...prev]);
     }
 
+    pushToGoogleSheetsRealtime('interviews', newInterview, 'insert', systemSettings.appsScriptUrl);
+
     return newInterview;
   };
 
   const updateInterview = (interview: Interview) => {
     setInterviews(prev => prev.map(i => i.Interview_ID === interview.Interview_ID ? interview : i));
     addAuditLog('تحديث بيانات المقابلة', 'مقابلات النائب', `تم تعديل موقف المقابلة ${interview.Interview_ID} وتوجيه النائب: ${interview.DeputyNotes || 'لا توجد ملاحظات'}`);
+    pushToGoogleSheetsRealtime('interviews', interview, 'update', systemSettings.appsScriptUrl);
   };
 
   const deleteInterview = (interviewId: string) => {
@@ -1124,6 +1149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setOrganizationRecords(prev => prev.map((o, idx) => idx === existingIndex ? updated : o));
       addAuditLog('تحديث التقييم التنظيمي', 'قسم التنظيم', `تحديث تقييم المواطن ${recordData.FullName} إلى (${recordData.OrgRating})`);
+      pushToGoogleSheetsRealtime('organization', updated, 'update', systemSettings.appsScriptUrl);
     } else {
       const newOrg: OrganizationRecord = {
         ...recordData,
@@ -1132,6 +1158,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setOrganizationRecords(prev => [newOrg, ...prev]);
       addAuditLog('إضافة سجل تنظيمي جديد', 'قسم التنظيم', `تسجيل تقييم تنظيمي للمواطن ${recordData.FullName} (${recordData.OrgRating})`);
+      pushToGoogleSheetsRealtime('organization', newOrg, 'insert', systemSettings.appsScriptUrl);
     }
   };
 

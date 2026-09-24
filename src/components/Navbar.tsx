@@ -345,35 +345,37 @@ export const Navbar: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Quick Department Switcher for RBAC verification */}
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
-                  <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                    <span>تبديل الحساب لفحص لوحة كل قسم:</span>
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-normal">اختبار الصلاحيات</span>
+                {/* Quick Department Switcher - EXCLUSIVELY for Developer */}
+                {currentUser?.Role === 'developer' && (
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                    <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                      <span>تبديل الحساب (صلاحية المطور فقط):</span>
+                      <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">مطور النظام</span>
+                    </div>
+                    <div className="space-y-1 max-h-52 overflow-y-auto pr-0.5">
+                      {users.slice(0, 8).map((u, idx) => (
+                        <button
+                          key={`${u.User_ID}-${idx}`}
+                          onClick={() => {
+                            switchUser(u);
+                            setShowRoleDropdown(false);
+                            showNavbarToast(`تم التبديل إلى: ${u.FullName} (${u.RoleArabic})`);
+                          }}
+                          className={`w-full text-right p-1.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                            currentUser?.User_ID === u.User_ID
+                              ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800'
+                              : 'hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          <span className="truncate">{u.FullName}</span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 shrink-0 font-normal mr-1">
+                            [{u.Role === 'reception' ? 'الاستعلامات' : u.Role === 'admin' ? 'الإدارة' : u.Role === 'interviews_officer' ? 'المقابلات' : u.Role === 'organization' ? 'التنظيم' : u.Role === 'machine' ? 'المكنة' : u.Role === 'audit' ? 'الرقابة' : u.RoleArabic.slice(0, 10)}]
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-1 max-h-52 overflow-y-auto pr-0.5">
-                    {users.slice(0, 8).map((u, idx) => (
-                      <button
-                        key={`${u.User_ID}-${idx}`}
-                        onClick={() => {
-                          switchUser(u);
-                          setShowRoleDropdown(false);
-                          showNavbarToast(`تم التبديل إلى: ${u.FullName} (${u.RoleArabic})`);
-                        }}
-                        className={`w-full text-right p-1.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                          currentUser?.User_ID === u.User_ID
-                            ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800'
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        <span className="truncate">{u.FullName}</span>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 shrink-0 font-normal mr-1">
-                          [{u.Role === 'reception' ? 'الاستعلامات' : u.Role === 'admin' ? 'الإدارة' : u.Role === 'interviews_officer' ? 'المقابلات' : u.Role === 'organization' ? 'التنظيم' : u.Role === 'machine' ? 'المكنة' : u.Role === 'audit' ? 'الرقابة' : u.RoleArabic.slice(0, 10)}]
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                )}
 
                 <div className="pt-1 space-y-1.5">
                   {['developer', 'director', 'admin'].includes(currentUser?.Role || '') && (

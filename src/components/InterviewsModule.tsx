@@ -16,7 +16,8 @@ export const InterviewsModule: React.FC = () => {
     addInterview, 
     updateInterview, 
     convertInterviewToRequest, 
-    citizens
+    citizens,
+    updateCitizen
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,8 +71,19 @@ export const InterviewsModule: React.FC = () => {
     e.preventDefault();
 
     if (editingInterview) {
+      const finalName = fullName.trim() || editingInterview.FullName;
+      const finalPhone1 = phone1.trim() || editingInterview.Phone1;
+      const finalPhone2 = phone2.trim() || editingInterview.Phone2;
+      const finalAddress = address.trim() || editingInterview.Address;
+      const finalReferrer = referrer.trim() || editingInterview.Referrer;
+
       updateInterview({
         ...editingInterview,
+        FullName: finalName,
+        Phone1: finalPhone1,
+        Phone2: finalPhone2,
+        Address: finalAddress,
+        Referrer: finalReferrer,
         Subject: subject,
         InterviewDate: interviewDate,
         InterviewTime: interviewTime,
@@ -80,8 +92,21 @@ export const InterviewsModule: React.FC = () => {
         DeputyNotes: deputyNotes,
         Outcome: outcome
       });
+
+      // Sync citizen master record if available
+      const cit = citizens.find(c => c.Citizen_ID === editingInterview.Citizen_ID);
+      if (cit) {
+        updateCitizen({
+          ...cit,
+          FullName: finalName,
+          Phone1: finalPhone1,
+          Phone2: finalPhone2,
+          ReferralSource: finalReferrer || cit.ReferralSource
+        });
+      }
+
       setEditingInterview(null);
-      setSuccessMessage('تم تحديث بيانات المقابلة وتوجيهات النائب بنجاح.');
+      setSuccessMessage('تم تحديث بيانات المقابلة والاسم وتوجيهات النائب بنجاح وترحيل التغييرات.');
     } else {
       if (!fullName.trim() || !subject.trim() || !interviewDate) {
         alert('يرجى ملء جميع الحقول المطلوبة للمقابلة.');

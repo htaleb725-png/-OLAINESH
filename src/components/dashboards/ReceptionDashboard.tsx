@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Citizen } from '../../types';
+import { DepartmentWorkReportsModal } from '../DepartmentWorkReportsModal';
 import { 
   Users, 
   UserPlus, 
@@ -29,6 +30,7 @@ export const ReceptionDashboard: React.FC = () => {
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [showWorkReportsModal, setShowWorkReportsModal] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -116,7 +118,16 @@ export const ReceptionDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
+          <button
+            onClick={() => setShowWorkReportsModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            title="سحب وطباعة أعمال الاستعلامات يومياً وأسبوعياً وشهرياً"
+          >
+            <Printer className="w-4 h-4 text-emerald-200" />
+            <span>تقرير أعمال الاستعلامات والطباعة</span>
+          </button>
+
           <button
             onClick={() => setActiveSection('reception')}
             className="flex-1 md:flex-none px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
@@ -442,6 +453,13 @@ export const ReceptionDashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Reports and Work Export Modal for Reception Desk */}
+      <DepartmentWorkReportsModal
+        isOpen={showWorkReportsModal}
+        onClose={() => setShowWorkReportsModal(false)}
+        defaultDepartment="reception"
+      />
 
     </div>
   );

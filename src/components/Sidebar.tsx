@@ -309,9 +309,6 @@ export const Sidebar: React.FC = () => {
               <button
                 onClick={() => {
                   setActiveSection(item.id);
-                  if (currentUser && item.id !== 'dashboard') {
-                    triggerDepartmentGreeting(currentUser, item.label);
-                  }
                 }}
                 className={`w-full flex items-center ${
                   isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-2.5'

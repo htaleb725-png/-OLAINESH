@@ -10,14 +10,19 @@ import {
   ArrowLeft,
   Trash2,
   AlertTriangle,
-  Sparkles
+  Sparkles,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 import { AiRequestDrafterModal } from './AiRequestDrafterModal';
+import { DepartmentWorkReportsModal } from './DepartmentWorkReportsModal';
 
 export const ReceptionModule: React.FC = () => {
   const { 
     citizens, 
     addCitizen, 
+    updateCitizen,
     deleteCitizen,
     getDropdownOptions, 
     setPrintableBadgeCitizen, 
@@ -33,6 +38,70 @@ export const ReceptionModule: React.FC = () => {
   const [showAiDrafterModal, setShowAiDrafterModal] = useState(false);
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showWorkReportsModal, setShowWorkReportsModal] = useState(false);
+
+  // Edit citizen state
+  const [editingCitizen, setEditingCitizen] = useState<Citizen | null>(null);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editFatherName, setEditFatherName] = useState('');
+  const [editGrandFatherName, setEditGrandFatherName] = useState('');
+  const [editGreatGrandFatherName, setEditGreatGrandFatherName] = useState('');
+  const [editSurname, setEditSurname] = useState('');
+  const [editPhone1, setEditPhone1] = useState('');
+  const [editPhone2, setEditPhone2] = useState('');
+  const [editDistrict, setEditDistrict] = useState('');
+  const [editSubDistrict, setEditSubDistrict] = useState('');
+  const [editJob, setEditJob] = useState('');
+  const [editEducation, setEditEducation] = useState('');
+  const [editRating, setEditRating] = useState('');
+  const [editReferralSource, setEditReferralSource] = useState('');
+
+  const handleOpenEditCitizen = (citizen: Citizen) => {
+    setEditingCitizen(citizen);
+    setEditFirstName(citizen.FirstName || '');
+    setEditFatherName(citizen.FatherName || '');
+    setEditGrandFatherName(citizen.GrandFatherName || '');
+    setEditGreatGrandFatherName(citizen.GreatGrandFatherName || '');
+    setEditSurname(citizen.Surname || '');
+    setEditPhone1(citizen.Phone1 || '');
+    setEditPhone2(citizen.Phone2 || '');
+    setEditDistrict(citizen.District || '');
+    setEditSubDistrict(citizen.SubDistrict || '');
+    setEditJob(citizen.Job || '');
+    setEditEducation(citizen.Education || '');
+    setEditRating(citizen.Rating || 'لائق');
+    setEditReferralSource(citizen.ReferralSource || 'مباشر بدون معرف');
+  };
+
+  const handleSaveEditCitizen = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCitizen) return;
+
+    const parts = [editFirstName, editFatherName, editGrandFatherName, editGreatGrandFatherName].filter(Boolean);
+    const newFullName = parts.join(' ') + (editSurname ? ` ${editSurname}` : '');
+
+    const updated: Citizen = {
+      ...editingCitizen,
+      FirstName: editFirstName.trim(),
+      FatherName: editFatherName.trim(),
+      GrandFatherName: editGrandFatherName.trim(),
+      GreatGrandFatherName: editGreatGrandFatherName.trim(),
+      Surname: editSurname.trim(),
+      FullName: newFullName.trim() || editingCitizen.FullName,
+      Phone1: editPhone1.trim(),
+      Phone2: editPhone2.trim(),
+      District: editDistrict.trim() || editingCitizen.District,
+      SubDistrict: editSubDistrict.trim() || editingCitizen.SubDistrict,
+      Job: editJob.trim() || editingCitizen.Job,
+      Education: editEducation.trim() || editingCitizen.Education,
+      Rating: editRating || editingCitizen.Rating,
+      ReferralSource: editReferralSource.trim() || editingCitizen.ReferralSource
+    };
+
+    updateCitizen(updated);
+    setSuccessMessage(`تم بنجاح تحديث بيانات المراجع (${updated.FullName}) وترحيل التغييرات مباشرة.`);
+    setEditingCitizen(null);
+  };
 
   // Form states for new citizen registration
   const [firstName, setFirstName] = useState('');
@@ -212,7 +281,16 @@ export const ReceptionModule: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowWorkReportsModal(true)}
+            className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="سحب وطباعة تقرير أعمال الاستعلامات (يومي / أسبوعي / شهري)"
+          >
+            <Printer className="w-4 h-4 text-emerald-200" />
+            <span>تقرير أعمال الاستعلامات والطباعة</span>
+          </button>
+
           <button
             onClick={() => setShowAiDrafterModal(true)}
             className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
@@ -333,6 +411,14 @@ export const ReceptionModule: React.FC = () => {
                             title="إضافة طلب جديد لنفس المراجع"
                           >
                             + إضافة طلب
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenEditCitizen(citizen)}
+                            className="p-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors cursor-pointer"
+                            title="تعديل بيانات واسم المراجع"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
                           </button>
 
                           <button
@@ -875,6 +961,188 @@ export const ReceptionModule: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Edit Citizen Modal */}
+      {editingCitizen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-white text-slate-800 rounded-2xl border border-slate-200 shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <Edit className="w-5 h-5 text-amber-600" />
+                <h3 className="text-base font-bold text-slate-900">تعديل بيانات واسم المراجع</h3>
+                <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  {editingCitizen.Citizen_ID}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingCitizen(null)}
+                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditCitizen} className="space-y-4 text-right">
+              {/* 5-part Name Inputs */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">الاسم الكامل (رباعي + اللقب)</label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-500 block mb-0.5">الاسم الأول</span>
+                    <input
+                      type="text"
+                      value={editFirstName}
+                      onChange={(e) => setEditFirstName(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block mb-0.5">اسم الأب</span>
+                    <input
+                      type="text"
+                      value={editFatherName}
+                      onChange={(e) => setEditFatherName(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block mb-0.5">اسم الجد</span>
+                    <input
+                      type="text"
+                      value={editGrandFatherName}
+                      onChange={(e) => setEditGrandFatherName(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block mb-0.5">أب الجد</span>
+                    <input
+                      type="text"
+                      value={editGreatGrandFatherName}
+                      onChange={(e) => setEditGreatGrandFatherName(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block mb-0.5">اللقب / العشيرة</span>
+                    <input
+                      type="text"
+                      value={editSurname}
+                      onChange={(e) => setEditSurname(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Phone numbers */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف الأساسي *</label>
+                  <input
+                    type="tel"
+                    value={editPhone1}
+                    onChange={(e) => setEditPhone1(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs font-mono focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    dir="ltr"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">رقم هاتف بديل / إضافي</label>
+                  <input
+                    type="tel"
+                    value={editPhone2}
+                    onChange={(e) => setEditPhone2(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs font-mono focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+
+              {/* Location & Job */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">القضاء / المنطقة</label>
+                  <input
+                    type="text"
+                    value={editDistrict}
+                    onChange={(e) => setEditDistrict(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">الناحية / الحي السكني</label>
+                  <input
+                    type="text"
+                    value={editSubDistrict}
+                    onChange={(e) => setEditSubDistrict(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">المهنة / العمل</label>
+                  <input
+                    type="text"
+                    value={editJob}
+                    onChange={(e) => setEditJob(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">التحصيل الدراسي</label>
+                  <input
+                    type="text"
+                    value={editEducation}
+                    onChange={(e) => setEditEducation(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">المعرف / جهة التزكية</label>
+                  <input
+                    type="text"
+                    value={editReferralSource}
+                    onChange={(e) => setEditReferralSource(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setEditingCitizen(null)}
+                  className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>حفظ التعديلات وترحيلها</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reports and Work Export Modal for Reception Desk */}
+      <DepartmentWorkReportsModal
+        isOpen={showWorkReportsModal}
+        onClose={() => setShowWorkReportsModal(false)}
+        defaultDepartment="reception"
+      />
+
       {/* AI Request Drafter Modal */}
       <AiRequestDrafterModal
         isOpen={showAiDrafterModal}

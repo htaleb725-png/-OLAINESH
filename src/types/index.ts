@@ -160,6 +160,81 @@ export interface Interview {
   CreatedAt?: string;
 }
 
+export type OrgFinalResult = 
+  | 'تم اكمال الطلب بالكامل' 
+  | 'تم حل الطلب جزئيا' 
+  | 'الطلب يحتاج متابعة' 
+  | 'لم يتم حل الطلب';
+
+export interface OrgFinalEvaluation {
+  id?: string;
+  evaluatedAt: string;
+  evaluatedBy?: string;
+  finalResult: OrgFinalResult;
+  requestId?: string;
+  requestSubject?: string;
+  
+  // الحالة الأولى: تم حل الطلب بالكامل
+  case1_citizenObtainedGoal?: 'نعم بالكامل' | 'نعم مع اجراء بسيط';
+  case1_citizenSatisfied?: 'نعم' | 'لا';
+  case1_personalRating?: number; // 1 to 5 (تقييم شخصي بعد سؤال المواطن)
+  case1_citizenReturnedForThanks?: 'نعم' | 'لا';
+  case1_officerNotes?: string;
+
+  // الحالة الثانية: حل الطلب جزئياً
+  case2_completedPart?: string; // ما الجزء الذي تم إنجازه
+  case2_uncompletedPart?: string; // ما الجزء الذي لم ينجز
+  case2_incompleteReason?: 'عدم اختصاص الجهة المعنية' | 'نقص مستندات' | 'يحتاج عرضا اضافيا' | 'سبب اخر' | string;
+  case2_customReason?: string;
+  case2_citizenAcceptedPartial?: 'نعم' | 'لا';
+  case2_officeNeedsExtraAction?: 'نعم' | 'لا';
+  case2_officerNotes?: string;
+
+  // الحالة الثالثة: الطلب يحتاج الى متابعة
+  case3_followupTypes?: string[]; // أنواع المتابعة: متابعة مع الجهة نفسها، مخاطبة جهة اخرى، طلب مستند اضافي، اعادة مخاطبة
+  case3_officerNotes?: string;
+  // دور مسؤول التنظيم:
+  case3_citizenSatisfiedWithService?: 'نعم' | 'لا';
+  case3_needsFollowup?: 'نعم' | 'لا';
+  case3_agreedFutureCommunication?: 'نعم' | 'لا';
+  case3_participateInSeminarOrInitiative?: 'نعم' | 'لا';
+  case3_officeVisitFrequency?: string; // عدد المرات التي يتردد بها على المكتب
+  case3_wantsToJoinTeam?: 'نعم' | 'لا'; // هل ترغب بالانضمام الى فريقنا (كمفتاح نهائي)
+  case3_teamMemberFileOpened?: boolean; // فتح ملف مستقل
+  case3_teamRole?: string;
+
+  // الحالة الرابعة: لم يحل الطلب
+  case4_failureReason?: 
+    | 'رفض الجهة المختصة'
+    | 'خارج اختصاص المكتب'
+    | 'نقص مستندات'
+    | 'عدم مكانية قانونية'
+    | 'عدم استجابة الطلب'
+    | 'تعذر تنفيذ الطلب'
+    | 'سبب اخر'
+    | string;
+  case4_customFailureReason?: string;
+  case4_explainedReasonToCitizen?: 'نعم' | 'لا';
+  case4_citizenStance?: 'متفهم' | 'غير متفهم' | 'غير راضي' | string;
+  case4_specialNote?: string; // ملاحظة تظهر نتيجة الطلب غير منجز سبب عدم الانجاز خارج اختصاصات المكتب
+  case4_officerNotes?: string;
+}
+
+export interface OrgTeamMember {
+  id: string;
+  Citizen_ID: string;
+  FullName: string;
+  Phone?: string;
+  District?: string;
+  SubDistrict?: string;
+  ElectionCenter?: string;
+  Role: string; // مفتاح نهائي، كادر تنظيمي، إلخ
+  JoinedDate: string;
+  OfficeVisitCount?: string;
+  Notes?: string;
+  Status: 'نشط' | 'قيد التواصل' | 'مرشح';
+}
+
 export interface OrganizationRecord {
   Org_ID?: string;
   Citizen_ID: string;
@@ -178,6 +253,9 @@ export interface OrganizationRecord {
   StationNumber?: string;
   Notes?: string;
   Referrer?: string;
+  finalEvaluation?: OrgFinalEvaluation;
+  isTeamMember?: boolean;
+  teamMemberRole?: string;
   CustomFields?: Record<string, string | number | boolean>;
   UpdatedAt?: string;
 }

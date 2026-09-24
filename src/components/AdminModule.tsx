@@ -28,6 +28,7 @@ import {
 import { DirectScannerPrinter } from './DirectScannerPrinter';
 import { AiRequestDrafterModal } from './AiRequestDrafterModal';
 import { SmartImageArchiveModule } from './SmartImageArchiveModule';
+import { ReferrersStats } from './ReferrersStats';
 
 export const AdminModule: React.FC = () => {
   const { 
@@ -36,6 +37,7 @@ export const AdminModule: React.FC = () => {
     updateRequest, 
     deleteRequest,
     citizens, 
+    updateCitizen,
     getDropdownOptions, 
     addDocument,
     currentUser,
@@ -46,7 +48,7 @@ export const AdminModule: React.FC = () => {
     forwardRequestWorkflow
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'requests_list' | 'reception_citizens' | 'direct_scanner' | 'smart_images'>('requests_list');
+  const [activeTab, setActiveTab] = useState<'requests_list' | 'reception_citizens' | 'direct_scanner' | 'smart_images' | 'referrers'>('requests_list');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [receptionSearch, setReceptionSearch] = useState('');
@@ -83,6 +85,8 @@ export const AdminModule: React.FC = () => {
   const [attachmentReq, setAttachmentReq] = useState('');
   const [attachmentResp, setAttachmentResp] = useState('');
   const [deputyNotes, setDeputyNotes] = useState('');
+  const [editableCitizenName, setEditableCitizenName] = useState('');
+  const [editableCitizenPhone, setEditableCitizenPhone] = useState('');
 
   const entitiesList = getDropdownOptions('Entity');
 
@@ -202,8 +206,13 @@ export const AdminModule: React.FC = () => {
     const finalEntity = entity === 'أخرى' && customEntity ? customEntity.trim() : entity;
 
     if (editingRequest) {
+      const finalName = editableCitizenName.trim() || editingRequest.CitizenName;
+      const finalPhone = editableCitizenPhone.trim() || editingRequest.CitizenPhone;
+
       updateRequest({
         ...editingRequest,
+        CitizenName: finalName,
+        CitizenPhone: finalPhone,
         Entity: finalEntity,
         RequestStatus: requestStatus,
         ProcessingStatus: processingStatus,
@@ -215,6 +224,17 @@ export const AdminModule: React.FC = () => {
         AttendanceType: attendanceType,
         DependencyStatus: dependencyStatus
       });
+
+      // Also sync citizen master record if name or phone changed
+      const targetCit = citizens.find(c => c.Citizen_ID === editingRequest.Citizen_ID);
+      if (targetCit) {
+        updateCitizen({
+          ...targetCit,
+          FullName: finalName,
+          Phone1: finalPhone
+        });
+      }
+
       setEditingRequest(null);
     } else {
       const citizen = citizens.find(c => c.Citizen_ID === selectedCitizenId);
@@ -270,6 +290,8 @@ export const AdminModule: React.FC = () => {
   const openEditModal = (req: OfficeRequest) => {
     setEditingRequest(req);
     setSelectedCitizenId(req.Citizen_ID);
+    setEditableCitizenName(req.CitizenName || '');
+    setEditableCitizenPhone(req.CitizenPhone || '');
     setEntity(req.Entity);
     setRequestStatus(req.RequestStatus);
     setProcessingStatus(req.ProcessingStatus);
@@ -412,6 +434,18 @@ export const AdminModule: React.FC = () => {
         >
           <FileImage className="w-4 h-4 text-emerald-500" />
           <span>أرشيف واستخراج الصور الذكية (1000 - 2000 صورة)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('referrers')}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTab === 'referrers'
+              ? 'bg-purple-700 text-white shadow-xs'
+              : 'bg-white text-purple-900 hover:bg-purple-50 border border-purple-200'
+          }`}
+        >
+          <Users2 className="w-4 h-4 text-purple-600" />
+          <span>قسم المعرفين وتزكيات المراجعين</span>
         </button>
       </div>
 
@@ -923,6 +957,24 @@ export const AdminModule: React.FC = () => {
         }} />
       )}
 
+      {/* Tab 5: Referrers Section in Admin (قسم المعرفين وتزكيات المراجعين) */}
+      {activeTab === 'referrers' && (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-l from-purple-900 via-slate-900 to-purple-950 text-white rounded-2xl p-4 border border-purple-800/40 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Users2 className="w-4 h-4 text-purple-400" />
+                <span>قسم المعرفين والتزكيات - قسم الإدارة</span>
+              </h3>
+              <p className="text-xs text-purple-200">
+                إدارة ومتابعة المعرفين والمزكين للمراجعين، وتحليل إحصائيات المعرفين الأكثر نشاطاً في مكتب النائب.
+              </p>
+            </div>
+          </div>
+          <ReferrersStats />
+        </div>
+      )}
+
       {/* Referral Modal */}
       {showReferralModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
@@ -1046,12 +1098,37 @@ export const AdminModule: React.FC = () => {
                   </select>
                 </div>
               ) : (
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-slate-500 block">المواطن:</span>
-                    <strong className="text-slate-900 text-sm font-bold">{editingRequest.CitizenName}</strong>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-bold">تعديل بيانات صاحب الطلب:</span>
+                    <span className="font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                      {editingRequest.Citizen_ID}
+                    </span>
                   </div>
-                  <div className="font-mono text-blue-700 font-bold">{editingRequest.Citizen_ID}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">الاسم الرباعي واللقب</label>
+                      <input
+                        type="text"
+                        value={editableCitizenName}
+                        onChange={(e) => setEditableCitizenName(e.target.value)}
+                        placeholder="اسم المواطن..."
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">رقم الهاتف</label>
+                      <input
+                        type="tel"
+                        value={editableCitizenPhone}
+                        onChange={(e) => setEditableCitizenPhone(e.target.value)}
+                        placeholder="07800000000"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs font-mono outline-none focus:ring-2 focus:ring-blue-500"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 

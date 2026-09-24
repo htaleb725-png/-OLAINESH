@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ClanDistrictStats } from '../ClanDistrictStats';
 import { ReferrersStats } from '../ReferrersStats';
+import { DepartmentWorkReportsModal } from '../DepartmentWorkReportsModal';
 import { 
   Users2, 
   Award, 
@@ -12,12 +13,14 @@ import {
   BarChart2, 
   Plus, 
   Search,
-  Sparkles
+  Sparkles,
+  Printer
 } from 'lucide-react';
 
 export const OrganizationDashboard: React.FC = () => {
   const { organizationRecords, citizens, currentUser, setActiveSection } = useApp();
   const [subTab, setSubTab] = useState<'overview' | 'clans' | 'referrers'>('overview');
+  const [showWorkReportsModal, setShowWorkReportsModal] = useState(false);
 
   const totalOrg = organizationRecords.length;
   const leadersCount = organizationRecords.filter(r => r.RoleType === 'كادر قيادي' || r.Rating === 'كادر قيادي').length;
@@ -46,7 +49,16 @@ export const OrganizationDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
+          <button
+            onClick={() => setShowWorkReportsModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            title="سحب وطباعة تقارير التنظيم والموقف الجماهيري"
+          >
+            <Printer className="w-4 h-4 text-emerald-200" />
+            <span>سحب تقارير التنظيم والطباعة</span>
+          </button>
+
           <button
             onClick={() => setActiveSection('organization')}
             className="flex-1 md:flex-none px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
@@ -236,6 +248,13 @@ export const OrganizationDashboard: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Organization Reports Modal */}
+      <DepartmentWorkReportsModal
+        isOpen={showWorkReportsModal}
+        onClose={() => setShowWorkReportsModal(false)}
+        defaultDepartment="organization"
+      />
 
     </div>
   );

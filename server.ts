@@ -35,8 +35,8 @@ async function startServer() {
 
   /**
    * Resilient Gemini Vision OCR execution:
-   * - Primary model: 'gemini-3.6-flash' (high throughput, low latency vision)
-   * - Fallback models: 'gemini-3.8-flash', 'gemini-3.1-flash-lite'
+   * - Primary model: 'gemini-3.8-flash' (high throughput, low latency vision)
+   * - Fallback models: 'gemini-3.1-flash-lite'
    * - Retries transient 503 (high demand) and 429 (rate limit) errors silently
    */
   async function callGeminiVisionOCRWithFallback(
@@ -46,9 +46,8 @@ async function startServer() {
     prompt: string
   ): Promise<{ text: string; modelUsed: string }> {
     const models = [
-      'gemini-3.6-flash',
       'gemini-3.8-flash',
-      'gemini-3.1-flash-lite',
+      'gemini-3.1-flash-lite'
     ];
 
     let lastError: any = null;
@@ -90,6 +89,7 @@ async function startServer() {
           if (isHighDemand) {
             await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 500));
           } else {
+            // Try next model if current model fails
             break;
           }
         }
